@@ -2,6 +2,11 @@ module github.com/pingcap/tidb
 
 go 1.16
 
+replace (
+	github.com/tikv/client-go/v2 v2.0.0-alpha.0.20210913094925-a8fa8acd44e7 => github.com/JmPotato/client-go/v2 v2.0.0-20210917020708-8eea46a2da7a
+	github.com/tikv/pd v1.1.0-beta.0.20210818082359-acba1da0018d => github.com/JmPotato/pd v1.1.0-beta.0.20210914054650-59358bb8ff46
+)
+
 require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/BurntSushi/toml v0.3.1
@@ -47,7 +52,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63
 	github.com/pingcap/failpoint v0.0.0-20210316064728-7acb0f0a3dfd
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
-	github.com/pingcap/kvproto v0.0.0-20210806074406-317f69fb54b4
+	github.com/pingcap/kvproto v0.0.0-20210819164333-bd5706b9d9f2
 	github.com/pingcap/log v0.0.0-20210906054005-afc726e70354
 	github.com/pingcap/parser v0.0.0-20210907051057-948434fa20e4
 	github.com/pingcap/sysutil v0.0.0-20210730114356-fcd8a63f68c5
@@ -82,7 +87,7 @@ require (
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210806184541-e5e7981a1069
+	golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.54.0
