@@ -4,7 +4,7 @@ go 1.16
 
 replace (
 	github.com/tikv/client-go/v2 v2.0.0-alpha.0.20210913094925-a8fa8acd44e7 => github.com/JmPotato/client-go/v2 v2.0.0-20210917020708-8eea46a2da7a
-	github.com/tikv/pd v1.1.0-beta.0.20210818082359-acba1da0018d => github.com/JmPotato/pd v1.1.0-beta.0.20210914054650-59358bb8ff46
+	github.com/tikv/pd v1.1.0-beta.0.20210818082359-acba1da0018d => github.com/JmPotato/pd v1.1.0-beta.0.20210916072616-1520ebe5f871
 )
 
 require (

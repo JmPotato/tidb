@@ -59,8 +59,8 @@ github.com/Jeffail/gabs/v2 v2.5.1 h1:ANfZYjpMlfTTKebycu4X1AgkVWumFVDYQl7JwOr4mDk
 github.com/Jeffail/gabs/v2 v2.5.1/go.mod h1:xCn81vdHKxFUuWWAaD5jCTQDNPBMh5pPs9IJ+NcziBI=
 github.com/JmPotato/client-go/v2 v2.0.0-20210917020708-8eea46a2da7a h1:BiD92xOsFgQqBSifPMs0ZjvTtYrJit63Gw0Os1YY6ks=
 github.com/JmPotato/client-go/v2 v2.0.0-20210917020708-8eea46a2da7a/go.mod h1:ApyZh40UgvB7DvTBXvhDGSYKI4SNw/a6sNLNpDFb79M=
-github.com/JmPotato/pd v1.1.0-beta.0.20210914054650-59358bb8ff46 h1:fxXxaJD0THgiGvKIoROJAzWNiVS9OtH+RX5MwgVnQf8=
-github.com/JmPotato/pd v1.1.0-beta.0.20210914054650-59358bb8ff46/go.mod h1:33Er91h0jjk+KCCLrjKNRyejGC7psSPlvpt/eyLU7l0=
+github.com/JmPotato/pd v1.1.0-beta.0.20210916072616-1520ebe5f871 h1:xtGH6Pbc+B5sXT6B48LCX/X5N6tkVyNJ4yWQZHYVaT0=
+github.com/JmPotato/pd v1.1.0-beta.0.20210916072616-1520ebe5f871/go.mod h1:33Er91h0jjk+KCCLrjKNRyejGC7psSPlvpt/eyLU7l0=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
 github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4KhCrqr6GRJjdC/gNfTdxkIXvuGZZda2VM=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
