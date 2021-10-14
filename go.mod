@@ -2,6 +2,8 @@ module github.com/pingcap/tidb
 
 go 1.16
 
+replace github.com/tikv/pd v1.1.0-beta.0.20210818082359-acba1da0018d => github.com/JmPotato/pd v1.1.0-beta.0.20211014061849-bf6538d8507c
+
 require (
 	cloud.google.com/go/storage v1.16.1
 	github.com/BurntSushi/toml v0.3.1
@@ -82,7 +84,7 @@ require (
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210806184541-e5e7981a1069
+	golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.54.0
