@@ -134,7 +134,8 @@ func (d TiKVDriver) OpenWithOptions(path string, options ...Option) (kv.Storage,
 			}),
 		),
 		pd.WithCustomTimeoutOption(time.Duration(d.pdConfig.PDServerTimeout)*time.Second),
-		pd.WithForwardingOption(config.GetGlobalConfig().EnableForwarding))
+		pd.WithForwardingOption(config.GetGlobalConfig().EnableForwarding),
+		pd.WithTSOFollowerProxy(true))
 	pdCli = util.InterceptedPDClient{Client: pdCli}
 
 	if err != nil {
