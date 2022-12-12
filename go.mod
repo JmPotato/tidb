@@ -211,6 +211,6 @@ replace github.com/dgrijalva/jwt-go => github.com/form3tech-oss/jwt-go v3.2.6-0.
 // replace github.com/tikv/client-go/v2 => github.com/tidblabs/client-go/v2 v2.0.1-0.20220717151142-c4285f97d152
 replace (
 	github.com/pingcap/kvproto => github.com/JmPotato/kvproto v0.0.0-20221212065645-bfd92aa5ebb6
-	github.com/tikv/client-go/v2 => github.com/JmPotato/client-go/v2 v2.0.0-20221212072427-69386149a573
+	github.com/tikv/client-go/v2 => github.com/JmPotato/client-go/v2 v2.0.0-20221212085234-6dc0bb191673
 	github.com/tikv/pd/client => github.com/JmPotato/pd/client v0.0.0-20221212065850-de3eb251a284
 )
