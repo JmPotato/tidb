@@ -37,6 +37,7 @@ import (
 	"github.com/pingcap/tidb/util/tikvutil"
 	"github.com/pingcap/tidb/util/versioninfo"
 	tikvcfg "github.com/tikv/client-go/v2/config"
+	"github.com/tikv/client-go/v2/keyspace/tenantcost"
 	tracing "github.com/uber/jaeger-client-go/config"
 	atomicutil "go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -750,9 +751,10 @@ type IsolationRead struct {
 // Tenant related configuration.
 type Tenant struct {
 	// Tenant mode is on or off
-	IsTenant bool `toml:"is-tenant" json:"is-tenant""`
+	IsTenant bool `toml:"is-tenant" json:"is-tenant"`
 	// TenantId set the tenant id for the TiDB server
-	TenantId uint16 `toml:"tenant-id" json:"tenant-id"`
+	TenantId uint16            `toml:"tenant-id" json:"tenant-id"`
+	Cost     tenantcost.Config `toml:"cost" json:"cost"`
 }
 
 // Experimental controls the features that are still experimental: their semantics, interfaces are subject to change.
@@ -921,6 +923,9 @@ var defaultConf = Config{
 	EnableForwarding:                     defTiKVCfg.EnableForwarding,
 	NewCollationsEnabledOnFirstBootstrap: true,
 	EnableGlobalKill:                     true,
+	Tenant: Tenant{
+		Cost: tenantcost.DefaultConfig(),
+	},
 }
 
 var (

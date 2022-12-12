@@ -192,13 +192,13 @@ func IsTiKVStorage(s kv.Storage) bool {
 }
 
 // SetUpTenantContorller sets up tenant controller.
-func SetUpTenantContorller(tenantID uint64, s kv.Storage, id string) error {
+func SetUpTenantContorller(tenantID uint64, s kv.Storage, id string, costCfg tenantcost.Config) error {
 	var store *tikvStore
 	var ok = false
 	if store, ok = s.(*tikvStore); !ok {
 		errors.New("invalid storage")
 	}
-	tenantKVControllor, err := tenantcost.NewTenantSideCostController(tenantID, store.GetPDClient())
+	tenantKVControllor, err := tenantcost.NewTenantSideCostController(tenantID, store.GetPDClient(), &costCfg)
 	if err != nil {
 		return err
 	}

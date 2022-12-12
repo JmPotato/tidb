@@ -77,8 +77,12 @@ github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/Jeffail/gabs/v2 v2.5.1 h1:ANfZYjpMlfTTKebycu4X1AgkVWumFVDYQl7JwOr4mDk=
 github.com/Jeffail/gabs/v2 v2.5.1/go.mod h1:xCn81vdHKxFUuWWAaD5jCTQDNPBMh5pPs9IJ+NcziBI=
-github.com/JmPotato/client-go/v2 v2.0.0-20221205085122-7c716fad505b h1:i31cRB3lmQU+d5jAGiNaFXzUrUXSeGEOK3r2wsiBeVs=
-github.com/JmPotato/client-go/v2 v2.0.0-20221205085122-7c716fad505b/go.mod h1:5NoYF6hScBnC7/ThiakvhN3Q6gq7CUCTH6QCQE/q8L8=
+github.com/JmPotato/client-go/v2 v2.0.0-20221212072427-69386149a573 h1:0aEihvqfv3ForfMTWHSCJ0vQ1C2m+ApsRDOWHuMbAbw=
+github.com/JmPotato/client-go/v2 v2.0.0-20221212072427-69386149a573/go.mod h1:+Riz3MXqznMISwFUG/PRugg3Hb8HTGLjeip69GSFgy8=
+github.com/JmPotato/kvproto v0.0.0-20221212065645-bfd92aa5ebb6 h1:d0yd0vZJxAZE7dOkN+NSJb1PpbvCCIUGHnTF9LI2/Mo=
+github.com/JmPotato/kvproto v0.0.0-20221212065645-bfd92aa5ebb6/go.mod h1:OYtxs0786qojVTmkVeufx93xe+jUgm56GUYRIKnmaGI=
+github.com/JmPotato/pd/client v0.0.0-20221212065850-de3eb251a284 h1:hb79HyHB806Z+lw97U3pONS5JoJipMbyvot6aZGDTDg=
+github.com/JmPotato/pd/client v0.0.0-20221212065850-de3eb251a284/go.mod h1:rCgpeAo9Cy1Ja4lEJFO7hsit0roL3UfeIMjrrdM6Af4=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
 github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4KhCrqr6GRJjdC/gNfTdxkIXvuGZZda2VM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
@@ -755,10 +759,6 @@ github.com/stretchr/testify v1.7.2-0.20220504104629-106ec21d14df/go.mod h1:6Fq8o
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tiancaiamao/appdash v0.0.0-20181126055449-889f96f722a2 h1:mbAskLJ0oJfDRtkanvQPiooDH8HvJ2FBh+iKT/OmiQQ=
 github.com/tiancaiamao/appdash v0.0.0-20181126055449-889f96f722a2/go.mod h1:2PfKggNGDuadAa0LElHrByyrz4JPZ9fFx6Gs7nx7ZZU=
-github.com/tidblabs/kvproto v0.0.0-20220717141846-8f5445390a32 h1:b2LtEj+P1sMfZjc+o7jYqKtycUJzzThtDfE9nzZ7qww=
-github.com/tidblabs/kvproto v0.0.0-20220717141846-8f5445390a32/go.mod h1:OYtxs0786qojVTmkVeufx93xe+jUgm56GUYRIKnmaGI=
-github.com/tidblabs/pd/client v0.0.0-20220717143221-433427468de1 h1:Q347STWaaHktppIDP+ycrjZG+0PztMOb1hMtcWklec0=
-github.com/tidblabs/pd/client v0.0.0-20220717143221-433427468de1/go.mod h1:7+tPmibPW3eoU/ktbLsG/Lel4xaDyfrxXMs1oeyD35U=
 github.com/tklauser/go-sysconf v0.3.9 h1:JeUVdAOWhhxVcU6Eqr/ATFHgXk/mmiItdKeJPev3vTo=
 github.com/tklauser/go-sysconf v0.3.9/go.mod h1:11DU/5sG7UexIrp/O6g35hrWzu0JxlwQ3LSFUzyeuhs=
 github.com/tklauser/numcpus v0.3.0 h1:ILuRUQBtssgnxw0XXIjKUC56fgnOrFoQQ/4+DeU2biQ=

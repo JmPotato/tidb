@@ -300,7 +300,7 @@ func createStoreAndDomain() (kv.Storage, *domain.Domain) {
 	storage, err := kvstore.New(fullPath)
 	// TODO: Fix this hacky way to init tenant client.
 	if cfg.Tenant.IsTenant && driver.IsTiKVStorage(storage) {
-		err := driver.SetUpTenantContorller(uint64(cfg.Tenant.TenantId), storage, cfg.AdvertiseAddress)
+		err := driver.SetUpTenantContorller(uint64(cfg.Tenant.TenantId), storage, cfg.AdvertiseAddress, cfg.Tenant.Cost)
 		terror.MustNil(err)
 	}
 	terror.MustNil(err)
