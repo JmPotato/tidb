@@ -3692,7 +3692,6 @@ func (e *memtableRetriever) setDataFromResourceGroups() error {
 				fmt.Fprintf(limitBuilder, ", ACTION=%s(%s)", actionType.String(), setting.SwitchGroupName)
 			default:
 			}
-			fmt.Fprintf(limitBuilder, ", ACTION=%s", model.RunawayActionType(setting.Action).String())
 			if setting.Watch != nil {
 				if setting.Watch.LastingDurationMs > 0 {
 					dur := time.Duration(setting.Watch.LastingDurationMs) * time.Millisecond
