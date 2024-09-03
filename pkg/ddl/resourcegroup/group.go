@@ -40,6 +40,8 @@ func NewGroupFromOptions(groupName string, options *model.ResourceGroupSettings)
 		runaway := &rmpb.RunawaySettings{
 			Rule: &rmpb.RunawayRule{},
 		}
+
+		// Update the rule settings.
 		if options.Runaway.ExecElapsedTimeMs == 0 {
 			return nil, ErrInvalidResourceGroupRunawayExecElapsedTime
 		}
@@ -47,12 +49,20 @@ func NewGroupFromOptions(groupName string, options *model.ResourceGroupSettings)
 		if options.Runaway.Action == model.RunawayActionNone {
 			return nil, ErrUnknownResourceGroupRunawayAction
 		}
+		// Update the action settings.
 		runaway.Action = rmpb.RunawayAction(options.Runaway.Action)
+		if options.Runaway.Action == model.RunawayActionSwitchGroup && len(options.Runaway.SwitchGroupName) == 0 {
+			return nil, ErrUnknownResourceGroupRunawaySwitchGroupName
+		}
+		// TODO: validate the switch group name to ensure it exists.
+		runaway.SwitchGroupName = options.Runaway.SwitchGroupName
+		// Update the watch settings.
 		if options.Runaway.WatchType != model.WatchNone {
 			runaway.Watch = &rmpb.RunawayWatch{}
 			runaway.Watch.Type = rmpb.RunawayWatchType(options.Runaway.WatchType)
 			runaway.Watch.LastingDurationMs = options.Runaway.WatchDurationMs
 		}
+
 		group.RunawaySettings = runaway
 	}
 

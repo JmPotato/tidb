@@ -1975,6 +1975,7 @@ const (
 	RunawayActionDryRun
 	RunawayActionCooldown
 	RunawayActionKill
+	RunawayActionSwitchGroup
 )
 
 // RunawayWatchType is the type of runaway watch.
@@ -2019,6 +2020,8 @@ func (t RunawayActionType) String() string {
 		return "COOLDOWN"
 	case RunawayActionKill:
 		return "KILL"
+	case RunawayActionSwitchGroup:
+		return "SWITCH_GROUP"
 	default:
 		return "DRYRUN"
 	}
@@ -2028,8 +2031,10 @@ func (t RunawayActionType) String() string {
 type ResourceGroupRunawaySettings struct {
 	ExecElapsedTimeMs uint64            `json:"exec_elapsed_time_ms"`
 	Action            RunawayActionType `json:"action"`
-	WatchType         RunawayWatchType  `json:"watch_type"`
-	WatchDurationMs   int64             `json:"watch_duration_ms"`
+	// If the action is `SWITCH_GROUP`, the `switch_group_name` will be set.
+	SwitchGroupName string           `json:"switch_group_name"`
+	WatchType       RunawayWatchType `json:"watch_type"`
+	WatchDurationMs int64            `json:"watch_duration_ms"`
 }
 
 type ResourceGroupBackgroundSettings struct {
@@ -2105,6 +2110,11 @@ func (p *ResourceGroupSettings) String() string {
 	}
 	if p.Runaway != nil {
 		writeSettingDurationToBuilder(sb, "QUERY_LIMIT=(EXEC_ELAPSED", time.Duration(p.Runaway.ExecElapsedTimeMs)*time.Millisecond, separatorFn)
+		if p.Runaway.Action == RunawayActionSwitchGroup {
+			writeSettingItemToBuilder(sb, fmt.Sprintf("ACTION=%s(%s)", p.Runaway.Action.String(), p.Runaway.SwitchGroupName))
+		} else {
+			writeSettingItemToBuilder(sb, "ACTION="+p.Runaway.Action.String())
+		}
 		writeSettingItemToBuilder(sb, "ACTION="+p.Runaway.Action.String())
 		if p.Runaway.WatchType != WatchNone {
 			writeSettingItemToBuilder(sb, "WATCH="+p.Runaway.WatchType.String())
