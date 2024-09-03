@@ -2115,7 +2115,6 @@ func (p *ResourceGroupSettings) String() string {
 		} else {
 			writeSettingItemToBuilder(sb, "ACTION="+p.Runaway.Action.String())
 		}
-		writeSettingItemToBuilder(sb, "ACTION="+p.Runaway.Action.String())
 		if p.Runaway.WatchType != WatchNone {
 			writeSettingItemToBuilder(sb, "WATCH="+p.Runaway.WatchType.String())
 			if p.Runaway.WatchDurationMs > 0 {
