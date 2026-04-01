@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap/kvproto/pkg/coprocessor"
 	"github.com/pingcap/tidb/pkg/kv"
+	"github.com/pingcap/tidb/pkg/sessionctx/vardef"
 	"github.com/pingcap/tidb/pkg/store/driver/backoff"
 	"github.com/pingcap/tidb/pkg/util/paging"
 	"github.com/pingcap/tidb/pkg/util/trxevents"
@@ -698,6 +699,82 @@ func TestBuildPagingTasksDisablePagingForSmallLimit(t *testing.T) {
 	taskEqual(t, tasks[0], regionIDs[0], 0, "a", "c")
 	require.False(t, tasks[0].paging)
 	require.Equal(t, tasks[0].pagingSize, uint64(0))
+}
+
+func TestRCPagingEligible(t *testing.T) {
+	// Eligible: RC enabled + resource group + TiKV + DAG
+	vardef.EnableResourceControl.Store(true)
+	defer vardef.EnableResourceControl.Store(false)
+	req := &kv.Request{
+		Tp:                kv.ReqTypeDAG,
+		StoreType:         kv.TiKV,
+		ResourceGroupName: "rg1",
+	}
+	require.True(t, rcPagingEligible(req))
+
+	// Not eligible: RC disabled
+	vardef.EnableResourceControl.Store(false)
+	require.False(t, rcPagingEligible(req))
+
+	// Not eligible: empty resource group
+	vardef.EnableResourceControl.Store(true)
+	req2 := &kv.Request{Tp: kv.ReqTypeDAG, StoreType: kv.TiKV}
+	require.False(t, rcPagingEligible(req2))
+
+	// Not eligible: TiFlash
+	req3 := &kv.Request{Tp: kv.ReqTypeDAG, StoreType: kv.TiFlash, ResourceGroupName: "rg1"}
+	require.False(t, rcPagingEligible(req3))
+
+	// Not eligible: non-DAG
+	req4 := &kv.Request{Tp: kv.ReqTypeAnalyze, StoreType: kv.TiKV, ResourceGroupName: "rg1"}
+	require.False(t, rcPagingEligible(req4))
+}
+
+func TestBuildCopTasksWithRCPagingSizeBytes(t *testing.T) {
+	mockClient, cluster, pdClient, err := testutils.NewMockTiKV("", nil)
+	require.NoError(t, err)
+	defer func() {
+		pdClient.Close()
+		err = mockClient.Close()
+		require.NoError(t, err)
+	}()
+	_, regionIDs, _ := testutils.BootstrapWithMultiRegions(cluster, []byte("g"), []byte("n"), []byte("t"))
+
+	pdCli := tikv.NewCodecPDClient(tikv.ModeTxn, pdClient)
+	defer pdCli.Close()
+	cache := NewRegionCache(tikv.NewRegionCache(pdCli))
+	defer cache.Close()
+	bo := backoff.NewBackofferWithVars(context.Background(), 3000, nil)
+
+	req := &kv.Request{}
+	req.Paging.Enable = true
+	req.Paging.MinPagingSize = paging.MinPagingSize
+
+	// With rcPagingSizeBytes set, tasks should carry the byte budget.
+	tasks, err := buildCopTasks(bo, buildCopRanges("a", "c"), &buildCopTaskOpt{
+		req:               req,
+		cache:             cache,
+		respChan:          true,
+		rcPagingSizeBytes: paging.MaxPagingSizeBytes,
+	})
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	taskEqual(t, tasks[0], regionIDs[0], 0, "a", "c")
+	require.True(t, tasks[0].paging)
+	require.Equal(t, paging.MaxPagingSizeBytes, tasks[0].pagingSizeBytes)
+
+	// When small limit disables paging, pagingSizeBytes should also be cleared.
+	req.LimitSize = 1
+	tasks, err = buildCopTasks(bo, buildCopRanges("a", "c"), &buildCopTaskOpt{
+		req:               req,
+		cache:             cache,
+		respChan:          true,
+		rcPagingSizeBytes: paging.MaxPagingSizeBytes,
+	})
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	require.False(t, tasks[0].paging)
+	require.Equal(t, uint64(0), tasks[0].pagingSizeBytes)
 }
 
 func toCopRange(r kv.KeyRange) *coprocessor.KeyRange {
