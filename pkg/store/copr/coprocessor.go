@@ -142,6 +142,18 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 	if !checkStoreBatchCopr(req) {
 		req.StoreBatchSize = 0
 	}
+	// RC Paging: if Resource Control is enabled and the request targets a
+	// resource group on TiKV with a DAG type, force-enable paging and set
+	// a default byte budget so each page's scanned bytes are bounded.
+	rcPagingSizeBytes := uint64(0)
+	if rcPagingEligible(req) {
+		if !req.Paging.Enable {
+			req.Paging.Enable = true
+			req.Paging.MinPagingSize = paging.MinPagingSize
+			req.Paging.MaxPagingSize = paging.MinAllowedMaxPagingSize
+		}
+		rcPagingSizeBytes = paging.MaxPagingSizeBytes
+	}
 
 	boCtx := ctx
 	if req.MaxExecutionTime > 0 {
@@ -160,11 +172,12 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 	tryRowHint := optRowHint(req)
 	elapsed := time.Duration(0)
 	buildOpt := &buildCopTaskOpt{
-		req:      req,
-		cache:    c.store.GetRegionCache(),
-		eventCb:  eventCb,
-		respChan: req.KeepOrder,
-		elapsed:  &elapsed,
+		req:               req,
+		cache:             c.store.GetRegionCache(),
+		eventCb:           eventCb,
+		respChan:          req.KeepOrder,
+		elapsed:           &elapsed,
+		rcPagingSizeBytes: rcPagingSizeBytes,
 	}
 	buildTaskFunc := func(ranges []kv.KeyRange, hints []int) error {
 		keyRanges := NewKeyRanges(ranges)
@@ -287,10 +300,11 @@ type copTask struct {
 	cmdType   tikvrpc.CmdType
 	storeType kv.StoreType
 
-	eventCb       trxevents.EventCallback
-	paging        bool
-	pagingSize    uint64
-	pagingTaskIdx uint32
+	eventCb         trxevents.EventCallback
+	paging          bool
+	pagingSize      uint64
+	pagingSizeBytes uint64
+	pagingTaskIdx   uint32
 
 	partitionIndex int64 // used by balanceBatchCopTask in PartitionTableScan
 	requestSource  util.RequestSource
@@ -367,6 +381,9 @@ type buildCopTaskOpt struct {
 	skipBuckets bool
 	// exceedsBoundRetry propagates bounded retry attempts to generated tasks.
 	exceedsBoundRetry int
+	// rcPagingSizeBytes is the byte budget per page set by RC paging.
+	// 0 means no byte-based limit.
+	rcPagingSizeBytes uint64
 }
 
 const (
@@ -690,6 +707,7 @@ func buildCopTasks(bo *Backoffer, ranges *KeyRanges, opt *buildCopTaskOpt) ([]*c
 				eventCb:           eventCb,
 				paging:            req.Paging.Enable,
 				pagingSize:        pagingSize,
+				pagingSizeBytes:   opt.rcPagingSizeBytes,
 				requestSource:     req.RequestSource,
 				RowCountHint:      hint,
 				busyThreshold:     req.StoreBusyThreshold,
@@ -717,6 +735,7 @@ func buildCopTasks(bo *Backoffer, ranges *KeyRanges, opt *buildCopTaskOpt) ([]*c
 					// disable paging for small limit.
 					task.paging = false
 					task.pagingSize = 0
+					task.pagingSizeBytes = 0
 				} else {
 					pagingSize = paging.GrowPagingSize(pagingSize, req.Paging.MaxPagingSize)
 				}
@@ -1662,6 +1681,7 @@ func (worker *copIteratorWorker) handleTaskOnce(bo *Backoffer, task *copTask) (*
 		Ranges:          task.ranges.ToPBRanges(),
 		SchemaVer:       worker.req.SchemaVar,
 		PagingSize:      task.pagingSize,
+		PagingSizeBytes: task.pagingSizeBytes,
 		Tasks:           task.ToPBBatchTasks(),
 		ConnectionId:    worker.req.ConnID,
 		ConnectionAlias: worker.req.ConnAlias,
@@ -1850,6 +1870,7 @@ func (worker *copIteratorWorker) handleCopPagingResult(bo *Backoffer, rpcCtx *ti
 		// If there is region error or lock error, keep the paging size and retry.
 		for _, remainedTask := range result.remains {
 			remainedTask.pagingSize = task.pagingSize
+			remainedTask.pagingSizeBytes = task.pagingSizeBytes
 		}
 		return result, nil
 	}
@@ -2890,6 +2911,24 @@ func optRowHint(req *kv.Request) bool {
 		opt = false
 	})
 	return opt
+}
+
+// rcPagingEligible checks whether RC byte-budget paging should be applied.
+// Only DAG requests on TiKV with a non-empty resource group are eligible.
+func rcPagingEligible(req *kv.Request) bool {
+	if !vardef.EnableResourceControl.Load() {
+		return false
+	}
+	if len(req.ResourceGroupName) == 0 {
+		return false
+	}
+	if req.StoreType != kv.TiKV {
+		return false
+	}
+	if req.Tp != kv.ReqTypeDAG {
+		return false
+	}
+	return true
 }
 
 func checkStoreBatchCopr(req *kv.Request) bool {

@@ -145,7 +145,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.20.0
 	golang.org/x/sys v0.41.0
@@ -375,3 +375,9 @@ replace (
 	sourcegraph.com/sourcegraph/appdash => github.com/sourcegraph/appdash v0.0.0-20190731080439-ebfcffb1b5c0
 	sourcegraph.com/sourcegraph/appdash-data => github.com/sourcegraph/appdash-data v0.0.0-20151005221446-73f23eafcf67
 )
+
+replace github.com/pingcap/kvproto => github.com/JmPotato/kvproto v0.0.0-20260401045836-48e3f28d9c74
+
+replace github.com/tikv/client-go/v2 => github.com/JmPotato/client-go/v2 v2.0.0-20260401050331-7babde558b8c
+
+replace github.com/tikv/pd/client => github.com/JmPotato/pd/client v0.0.0-20260401045948-eb9d9d965c62
