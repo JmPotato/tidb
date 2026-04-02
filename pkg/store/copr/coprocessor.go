@@ -146,13 +146,13 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 	// resource group on TiKV with a DAG type, force-enable paging and set
 	// a default byte budget so each page's scanned bytes are bounded.
 	rcPagingSizeBytes := uint64(0)
-	if rcPagingEligible(req) {
+	if rcPagingEligible(req) && req.Paging.RCPagingSizeBytes > 0 {
 		if !req.Paging.Enable {
 			req.Paging.Enable = true
 			req.Paging.MinPagingSize = paging.MinPagingSize
 			req.Paging.MaxPagingSize = paging.MinAllowedMaxPagingSize
 		}
-		rcPagingSizeBytes = paging.MaxPagingSizeBytes
+		rcPagingSizeBytes = req.Paging.RCPagingSizeBytes
 	}
 
 	boCtx := ctx

@@ -538,6 +538,11 @@ const (
 	// TiDBMaxPagingSize is used to control the max paging size in the coprocessor paging protocol.
 	TiDBMaxPagingSize = "tidb_max_paging_size"
 
+	// TiDBRCPagingSizeBytes is the byte budget per page for Resource Control paging.
+	// When non-zero and RC is enabled, TiKV stops scanning a page once accumulated bytes reach this limit.
+	// 0 means disabled (no byte-budget paging).
+	TiDBRCPagingSizeBytes = "tidb_rc_paging_size_bytes"
+
 	// TiDBEnableCascadesPlanner is used to control whether to enable the cascades planner.
 	TiDBEnableCascadesPlanner = "tidb_enable_cascades_planner"
 
@@ -1474,6 +1479,7 @@ const (
 	DefInitChunkSize                        = 32
 	DefMinPagingSize                        = int(paging.MinPagingSize)
 	DefMaxPagingSize                        = int(paging.MinAllowedMaxPagingSize)
+	DefRCPagingSizeBytes                    = int(paging.MaxPagingSizeBytes)
 	DefMaxChunkSize                         = 1024
 	DefDMLBatchSize                         = 0
 	DefMaxPreparedStmtCount                 = -1
