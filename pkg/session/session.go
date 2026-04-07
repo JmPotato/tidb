@@ -3380,7 +3380,7 @@ func (s *session) GetDistSQLCtx() *distsqlctx.DistSQLContext {
 			EnablePaging:                  vars.EnablePaging,
 			MinPagingSize:                 vars.MinPagingSize,
 			MaxPagingSize:                 vars.MaxPagingSize,
-			RCPagingSizeBytes:             vars.RCPagingSizeBytes,
+			PagingSizeBytes:               vars.PagingSizeBytes,
 			RequestSourceType:             vars.RequestSourceType,
 			ExplicitRequestSourceType:     vars.ExplicitRequestSourceType,
 			StoreBatchSize:                vars.StoreBatchSize,

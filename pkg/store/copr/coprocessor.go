@@ -132,6 +132,23 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 		// coprocessor request but type is not DAG
 		req.Paging.Enable = false
 	}
+	// Byte-budget paging: if the request is eligible and has a byte budget,
+	// ensure paging is enabled so each page's scanned bytes are bounded.
+	// The TiKV coprocessor protocol requires paging to be enabled for the
+	// PagingSizeBytes field to take effect. When force-enabling paging, we
+	// use minimal row-count parameters so the byte budget becomes the
+	// dominant page-break signal.
+	// This must happen before checkStoreBatchCopr, which disables batch copr
+	// when paging is enabled.
+	pagingSizeBytes := uint64(0)
+	if pagingBytesEligible(req) && req.Paging.PagingSizeBytes > 0 {
+		if !req.Paging.Enable {
+			req.Paging.Enable = true
+			req.Paging.MinPagingSize = paging.MinPagingSize
+			req.Paging.MaxPagingSize = paging.MinAllowedMaxPagingSize
+		}
+		pagingSizeBytes = req.Paging.PagingSizeBytes
+	}
 	failpoint.Inject("checkKeyRangeSortedForPaging", func(_ failpoint.Value) {
 		if req.Paging.Enable {
 			if !req.KeyRanges.IsFullySorted() {
@@ -141,18 +158,6 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 	})
 	if !checkStoreBatchCopr(req) {
 		req.StoreBatchSize = 0
-	}
-	// RC Paging: if Resource Control is enabled and the request targets a
-	// resource group on TiKV with a DAG type, force-enable paging and set
-	// a default byte budget so each page's scanned bytes are bounded.
-	rcPagingSizeBytes := uint64(0)
-	if rcPagingEligible(req) && req.Paging.RCPagingSizeBytes > 0 {
-		if !req.Paging.Enable {
-			req.Paging.Enable = true
-			req.Paging.MinPagingSize = paging.MinPagingSize
-			req.Paging.MaxPagingSize = paging.MinAllowedMaxPagingSize
-		}
-		rcPagingSizeBytes = req.Paging.RCPagingSizeBytes
 	}
 
 	boCtx := ctx
@@ -177,7 +182,7 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 		eventCb:           eventCb,
 		respChan:          req.KeepOrder,
 		elapsed:           &elapsed,
-		rcPagingSizeBytes: rcPagingSizeBytes,
+		pagingSizeBytes: pagingSizeBytes,
 	}
 	buildTaskFunc := func(ranges []kv.KeyRange, hints []int) error {
 		keyRanges := NewKeyRanges(ranges)
@@ -381,9 +386,9 @@ type buildCopTaskOpt struct {
 	skipBuckets bool
 	// exceedsBoundRetry propagates bounded retry attempts to generated tasks.
 	exceedsBoundRetry int
-	// rcPagingSizeBytes is the byte budget per page set by RC paging.
+	// pagingSizeBytes is the byte budget per page.
 	// 0 means no byte-based limit.
-	rcPagingSizeBytes uint64
+	pagingSizeBytes uint64
 }
 
 const (
@@ -707,7 +712,7 @@ func buildCopTasks(bo *Backoffer, ranges *KeyRanges, opt *buildCopTaskOpt) ([]*c
 				eventCb:           eventCb,
 				paging:            req.Paging.Enable,
 				pagingSize:        pagingSize,
-				pagingSizeBytes:   opt.rcPagingSizeBytes,
+				pagingSizeBytes:   opt.pagingSizeBytes,
 				requestSource:     req.RequestSource,
 				RowCountHint:      hint,
 				busyThreshold:     req.StoreBusyThreshold,
@@ -1781,7 +1786,7 @@ func (worker *copIteratorWorker) handleTaskOnce(bo *Backoffer, task *copTask) (*
 	}
 
 	if copResp != nil {
-		tidbmetrics.DistSQLCoprRespBodySize.WithLabelValues(storeAddr).Observe(float64(len(copResp.Data) / 1024))
+		tidbmetrics.DistSQLCoprRespBodySize.WithLabelValues(storeAddr).Observe(float64(len(copResp.Data)) / 1024)
 	}
 
 	var result *copTaskResult
@@ -2913,15 +2918,9 @@ func optRowHint(req *kv.Request) bool {
 	return opt
 }
 
-// rcPagingEligible checks whether RC byte-budget paging should be applied.
-// Only DAG requests on TiKV with a non-empty resource group are eligible.
-func rcPagingEligible(req *kv.Request) bool {
-	if !vardef.EnableResourceControl.Load() {
-		return false
-	}
-	if len(req.ResourceGroupName) == 0 {
-		return false
-	}
+// pagingBytesEligible checks whether byte-budget paging should be applied.
+// Only DAG requests on TiKV support byte-budget paging.
+func pagingBytesEligible(req *kv.Request) bool {
 	if req.StoreType != kv.TiKV {
 		return false
 	}

@@ -21,7 +21,6 @@ import (
 
 	"github.com/pingcap/kvproto/pkg/coprocessor"
 	"github.com/pingcap/tidb/pkg/kv"
-	"github.com/pingcap/tidb/pkg/sessionctx/vardef"
 	"github.com/pingcap/tidb/pkg/store/driver/backoff"
 	"github.com/pingcap/tidb/pkg/util/paging"
 	"github.com/pingcap/tidb/pkg/util/trxevents"
@@ -701,36 +700,24 @@ func TestBuildPagingTasksDisablePagingForSmallLimit(t *testing.T) {
 	require.Equal(t, tasks[0].pagingSize, uint64(0))
 }
 
-func TestRCPagingEligible(t *testing.T) {
-	// Eligible: RC enabled + resource group + TiKV + DAG
-	vardef.EnableResourceControl.Store(true)
-	defer vardef.EnableResourceControl.Store(false)
+func TestPagingBytesEligible(t *testing.T) {
+	// Eligible: TiKV + DAG
 	req := &kv.Request{
-		Tp:                kv.ReqTypeDAG,
-		StoreType:         kv.TiKV,
-		ResourceGroupName: "rg1",
+		Tp:        kv.ReqTypeDAG,
+		StoreType: kv.TiKV,
 	}
-	require.True(t, rcPagingEligible(req))
-
-	// Not eligible: RC disabled
-	vardef.EnableResourceControl.Store(false)
-	require.False(t, rcPagingEligible(req))
-
-	// Not eligible: empty resource group
-	vardef.EnableResourceControl.Store(true)
-	req2 := &kv.Request{Tp: kv.ReqTypeDAG, StoreType: kv.TiKV}
-	require.False(t, rcPagingEligible(req2))
+	require.True(t, pagingBytesEligible(req))
 
 	// Not eligible: TiFlash
-	req3 := &kv.Request{Tp: kv.ReqTypeDAG, StoreType: kv.TiFlash, ResourceGroupName: "rg1"}
-	require.False(t, rcPagingEligible(req3))
+	req2 := &kv.Request{Tp: kv.ReqTypeDAG, StoreType: kv.TiFlash}
+	require.False(t, pagingBytesEligible(req2))
 
 	// Not eligible: non-DAG
-	req4 := &kv.Request{Tp: kv.ReqTypeAnalyze, StoreType: kv.TiKV, ResourceGroupName: "rg1"}
-	require.False(t, rcPagingEligible(req4))
+	req3 := &kv.Request{Tp: kv.ReqTypeAnalyze, StoreType: kv.TiKV}
+	require.False(t, pagingBytesEligible(req3))
 }
 
-func TestBuildCopTasksWithRCPagingSizeBytes(t *testing.T) {
+func TestBuildCopTasksWithPagingSizeBytes(t *testing.T) {
 	mockClient, cluster, pdClient, err := testutils.NewMockTiKV("", nil)
 	require.NoError(t, err)
 	defer func() {
@@ -750,18 +737,18 @@ func TestBuildCopTasksWithRCPagingSizeBytes(t *testing.T) {
 	req.Paging.Enable = true
 	req.Paging.MinPagingSize = paging.MinPagingSize
 
-	// With rcPagingSizeBytes set, tasks should carry the byte budget.
+	// With pagingSizeBytes set, tasks should carry the byte budget.
 	tasks, err := buildCopTasks(bo, buildCopRanges("a", "c"), &buildCopTaskOpt{
-		req:               req,
-		cache:             cache,
-		respChan:          true,
-		rcPagingSizeBytes: paging.MaxPagingSizeBytes,
+		req:             req,
+		cache:           cache,
+		respChan:        true,
+		pagingSizeBytes: uint64(4 * 1024 * 1024),
 	})
 	require.NoError(t, err)
 	require.Len(t, tasks, 1)
 	taskEqual(t, tasks[0], regionIDs[0], 0, "a", "c")
 	require.True(t, tasks[0].paging)
-	require.Equal(t, paging.MaxPagingSizeBytes, tasks[0].pagingSizeBytes)
+	require.Equal(t, uint64(4 * 1024 * 1024), tasks[0].pagingSizeBytes)
 
 	// When small limit disables paging, pagingSizeBytes should also be cleared.
 	req.LimitSize = 1
@@ -769,7 +756,7 @@ func TestBuildCopTasksWithRCPagingSizeBytes(t *testing.T) {
 		req:               req,
 		cache:             cache,
 		respChan:          true,
-		rcPagingSizeBytes: paging.MaxPagingSizeBytes,
+		pagingSizeBytes: uint64(4 * 1024 * 1024),
 	})
 	require.NoError(t, err)
 	require.Len(t, tasks, 1)

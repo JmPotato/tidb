@@ -633,9 +633,9 @@ type Request struct {
 		// when enabled, this field is adjusted to be max(MaxPagingSize, paging.MinAllowedMaxPagingSize),
 		// see paging.GrowPagingSize
 		MaxPagingSize uint64
-		// RCPagingSizeBytes is the byte budget per page for RC paging.
+		// PagingSizeBytes is the byte budget per page.
 		// 0 means disabled (no byte-budget paging).
-		RCPagingSizeBytes uint64
+		PagingSizeBytes uint64
 	}
 	// RequestSource indicates whether the request is an internal request.
 	RequestSource util.RequestSource

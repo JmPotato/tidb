@@ -28,12 +28,6 @@ const (
 	MinAllowedMaxPagingSize        = 50000
 	pagingGrowingSum               = ((2 << maxPagingSizeShift) - 1) * MinPagingSize
 	Threshold               uint64 = 960
-
-	// Byte-budget paging constants for RC (Resource Control) paging.
-	// MinPagingSizeBytes is the minimum byte budget per page (256 KB).
-	MinPagingSizeBytes uint64 = 256 * 1024
-	// MaxPagingSizeBytes is the maximum byte budget per page (4 MB).
-	MaxPagingSizeBytes uint64 = 4 * 1024 * 1024
 )
 
 // GrowPagingSize grows the paging size and ensures it does not exceed
