@@ -90,6 +90,6 @@ func InitDistSQLMetrics() {
 			Subsystem: "distsql",
 			Name:      "copr_resp_size",
 			Help:      "copr task response data size in bytes.",
-			Buckets:   prometheus.ExponentialBuckets(1, 2, 10),
+			Buckets:   prometheus.ExponentialBuckets(1, 2, 19),
 		}, []string{LblStore})
 }
