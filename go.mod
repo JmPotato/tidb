@@ -371,7 +371,7 @@ replace (
 	github.com/pingcap/kvproto => github.com/JmPotato/kvproto v0.0.0-20260401045836-48e3f28d9c74
 	github.com/pingcap/tidb/pkg/parser => ./pkg/parser
 	github.com/tikv/client-go/v2 => github.com/JmPotato/client-go/v2 v2.0.0-20260402030241-85eebdba76ab
-	github.com/tikv/pd/client => github.com/JmPotato/pd/client v0.0.0-20260402021839-b98ff48814c2
+	github.com/tikv/pd/client => github.com/JmPotato/pd/client v0.0.0-20260409053522-fda21466b565
 
 	// TODO: `sourcegraph.com/sourcegraph/appdash` has been archived, and the original host has been removed.
 	// Please remove these dependencies.
