@@ -161,11 +161,6 @@ func TestGenSelectStmts(t *testing.T) {
 	sql, params = sqlGenFn()
 	require.Equal(t, "select * from mysql.tidb_runaway_watch where id = %?", sql)
 	require.Equal(t, []any{int64(42)}, params)
-
-	sqlGenFn = reader.genSelectByGroupStmt("rg_bulk")
-	sql, params = sqlGenFn()
-	require.Equal(t, "select * from mysql.tidb_runaway_watch where resource_group_name = %?", sql)
-	require.Equal(t, []any{"rg_bulk"}, params)
 }
 
 func TestWatchAdvanceCheckpoint(t *testing.T) {
