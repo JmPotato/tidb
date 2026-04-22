@@ -368,9 +368,11 @@ replace (
 	// Downgrade grpc to v1.63.2, as well as other related modules.
 	github.com/apache/arrow-go/v18 => github.com/joechenrh/arrow-go/v18 v18.0.0-20250911101656-62c34c9a3b82
 	github.com/go-ldap/ldap/v3 => github.com/YangKeao/ldap/v3 v3.4.5-0.20230421065457-369a3bab1117
-	github.com/pingcap/tidb/pkg/parser => ./pkg/parser
 
-	// Temporary: pin to feature branches. Revert once tikv/client-go#1947 and tikv/pd#10611 are merged and tagged.
+	// Temporary: pin to feature branches. Revert once the companion PRs in
+	// pingcap/kvproto, tikv/client-go, and tikv/pd are merged and tagged.
+	github.com/pingcap/kvproto => github.com/JmPotato/kvproto v0.0.0-20260422094701-bfb791bade1a
+	github.com/pingcap/tidb/pkg/parser => ./pkg/parser
 	github.com/tikv/client-go/v2 => github.com/YuhaoZhang00/client-go/v2 v2.0.8-0.20260421095055-f0e16ed01d81
 	github.com/tikv/pd/client => github.com/YuhaoZhang00/pd/client v0.0.0-20260422074559-ded66bf8f5d8
 	// TODO: `sourcegraph.com/sourcegraph/appdash` has been archived, and the original host has been removed.
