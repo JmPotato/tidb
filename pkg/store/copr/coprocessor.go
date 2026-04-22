@@ -738,10 +738,17 @@ func buildCopTasks(bo *Backoffer, ranges *KeyRanges, opt *buildCopTaskOpt) ([]*c
 			i = nextI
 			if req.Paging.Enable {
 				if req.LimitSize != 0 && req.LimitSize < pagingSize {
-					// disable paging for small limit.
-					task.paging = false
-					task.pagingSize = 0
-					task.pagingSizeBytes = 0
+					// Small LIMIT bounds row count naturally, so row-count paging
+					// is redundant. When a byte budget is present we must keep
+					// paging enabled: PagingSizeBytes only takes effect on the
+					// TiKV side while paging is on, so clearing it here would
+					// silently drop the per-RPC scan-bytes upper bound for
+					// small-LIMIT queries (e.g. selective filters over wide rows).
+					if opt.pagingSizeBytes == 0 {
+						task.paging = false
+						task.pagingSize = 0
+						task.pagingSizeBytes = 0
+					}
 				} else {
 					pagingSize = paging.GrowPagingSize(pagingSize, req.Paging.MaxPagingSize)
 				}

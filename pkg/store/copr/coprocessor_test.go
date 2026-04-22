@@ -750,13 +750,26 @@ func TestBuildCopTasksWithPagingSizeBytes(t *testing.T) {
 	require.True(t, tasks[0].paging)
 	require.Equal(t, uint64(4*1024*1024), tasks[0].pagingSizeBytes)
 
-	// When small limit disables paging, pagingSizeBytes should also be cleared.
+	// Small LIMIT alone would disable row-count paging, but an active byte
+	// budget keeps paging on so PagingSizeBytes still bounds per-RPC scan bytes.
 	req.LimitSize = 1
 	tasks, err = buildCopTasks(bo, buildCopRanges("a", "c"), &buildCopTaskOpt{
 		req:             req,
 		cache:           cache,
 		respChan:        true,
 		pagingSizeBytes: uint64(4 * 1024 * 1024),
+	})
+	require.NoError(t, err)
+	require.Len(t, tasks, 1)
+	require.True(t, tasks[0].paging)
+	require.Equal(t, uint64(4*1024*1024), tasks[0].pagingSizeBytes)
+
+	// Without a byte budget, the original small-LIMIT behavior still holds:
+	// paging is disabled and any stray pagingSizeBytes is cleared.
+	tasks, err = buildCopTasks(bo, buildCopRanges("a", "c"), &buildCopTaskOpt{
+		req:      req,
+		cache:    cache,
+		respChan: true,
 	})
 	require.NoError(t, err)
 	require.Len(t, tasks, 1)
