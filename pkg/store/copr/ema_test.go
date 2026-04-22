@@ -25,7 +25,7 @@ import (
 )
 
 func TestRUEMASeedAndConverge(t *testing.T) {
-	e := newRUEMA()
+	e := newRUEMA(0)
 	require.Zero(t, e.Predict(), "fresh EMA: no prediction")
 
 	now := time.Now()
@@ -38,8 +38,40 @@ func TestRUEMASeedAndConverge(t *testing.T) {
 		"steady input: prediction stays at the input")
 }
 
+func TestRUEMAColdStartSeedBlends(t *testing.T) {
+	// With a non-zero seed (e.g. the configured per-page byte budget), the
+	// EMA treats the seed as a synthetic observation at construction time so
+	// it participates in convergence. Cold-start Predict returns the seed,
+	// and the seed's weight decays gradually as real samples arrive instead
+	// of being overwritten by the first Observe.
+	const seed uint64 = 2_000_000
+	const sample uint64 = 500_000
+	e := newRUEMA(seed)
+	require.Equal(t, seed, e.Predict(),
+		"seeded EMA: Predict returns the seed before any real observation")
+
+	// One real sample with a small dt (~100ms vs tau=1s gives alpha≈0.1),
+	// so the seed should still carry most of the weight.
+	e.Observe(sample, time.Now().Add(100*time.Millisecond))
+	got := e.Predict()
+	require.Less(t, got, seed,
+		"one sample below the seed pulls Predict down")
+	require.Greater(t, got, sample,
+		"seed keeps most of its weight after a single small-dt sample")
+	require.Greater(t, got, uint64(1_500_000),
+		"with dt=100ms and tau=1s, seed still dominates the blend")
+
+	// Enough real samples at the new regime eventually wash the seed out.
+	base := time.Now().Add(time.Second)
+	for i := 0; i < 50; i++ {
+		e.Observe(sample, base.Add(time.Duration(i)*100*time.Millisecond))
+	}
+	require.InDelta(t, float64(sample), float64(e.Predict()), float64(sample)/100,
+		"after many samples the seed is washed out and EMA converges to the sample regime")
+}
+
 func TestRUEMATracksShift(t *testing.T) {
-	e := newRUEMA()
+	e := newRUEMA(0)
 	now := time.Now()
 	for i := 0; i < 5; i++ {
 		e.Observe(100_000, now.Add(time.Duration(i)*100*time.Millisecond))
@@ -59,7 +91,7 @@ func TestRUEMATracksShift(t *testing.T) {
 }
 
 func TestRUEMALargeGapCollapsesWeight(t *testing.T) {
-	e := newRUEMA()
+	e := newRUEMA(0)
 	now := time.Now()
 	e.Observe(100_000, now)
 	// A gap much larger than tau (default 1s) means alpha ≈ 1, so the new
@@ -91,7 +123,7 @@ func TestRUEMAConcurrentObserveAndPredict(t *testing.T) {
 	// Predict must be race-free. Run with `go test -race` to exercise the
 	// mutex; this test guarantees no panic/deadlock and that readiness is
 	// eventually observed from a reader goroutine.
-	e := newRUEMA()
+	e := newRUEMA(0)
 	const writers = 8
 	const iters = 200
 	done := make(chan struct{})
@@ -128,7 +160,7 @@ func TestRUEMANonMonotonicTime(t *testing.T) {
 	// (clock skew, test fixture), Observe must not blow up with a negative
 	// Δt. The behavior we want: treat the gap as zero and use the new
 	// sample only minimally.
-	e := newRUEMA()
+	e := newRUEMA(0)
 	now := time.Now()
 	e.Observe(100_000, now)
 	e.Observe(500_000, now.Add(-1*time.Second))

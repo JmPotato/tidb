@@ -33,8 +33,20 @@ type ruEMA struct {
 	lastObsAt time.Time
 }
 
-func newRUEMA() *ruEMA {
-	return &ruEMA{tau: defaultRUEMATau}
+// newRUEMA returns an EMA seeded with seedBytes. A non-zero seed is injected
+// as a synthetic observation at construction time so it behaves like a real
+// sample from then on: subsequent Observe calls blend against it with a
+// finite alpha derived from the elapsed dt, and the seed's weight decays
+// naturally as real samples accumulate. This gives cold-start pre-charge a
+// conservative upper-bound prior (e.g. the configured per-page byte budget)
+// that converges toward reality over several RPCs rather than being wiped
+// out by the first observation. Pass 0 to disable pre-seeding.
+func newRUEMA(seedBytes uint64) *ruEMA {
+	e := &ruEMA{tau: defaultRUEMATau}
+	if seedBytes > 0 {
+		e.Observe(seedBytes, time.Now())
+	}
+	return e
 }
 
 func (e *ruEMA) Observe(bytes uint64, now time.Time) {
