@@ -870,6 +870,11 @@ func (b *ResourceGroupTagBuilder) SetPlanDigest(digest *parser.Digest) *Resource
 	return b
 }
 
+// PlanDigest returns the plan digest, or nil if unset.
+func (b *ResourceGroupTagBuilder) PlanDigest() *parser.Digest {
+	return b.planDigest
+}
+
 // BuildProtoTagger sets the access key for the request.
 func (b *ResourceGroupTagBuilder) BuildProtoTagger() tikvrpc.ResourceGroupTagger {
 	return func(req *tikvrpc.Request) {

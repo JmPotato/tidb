@@ -217,6 +217,12 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 	if err != nil {
 		return nil, copErrorResponse{err}
 	}
+	var emaCacheKey string
+	if req.ResourceGroupTagger != nil {
+		if d := req.ResourceGroupTagger.PlanDigest(); d != nil {
+			emaCacheKey = d.String()
+		}
+	}
 	it := &copIterator{
 		store:            c.store,
 		req:              req,
@@ -228,7 +234,7 @@ func (c *CopClient) BuildCopIterator(ctx context.Context, req *kv.Request, vars 
 		rpcCancel:        tikv.NewRPCanceller(),
 		buildTaskElapsed: *buildOpt.elapsed,
 		runawayChecker:   req.RunawayChecker,
-		ema:              newRUEMA(pagingSizeBytes),
+		ema:              globalEMACache.GetOrCreate(emaCacheKey, pagingSizeBytes),
 	}
 	// Pipelined-dml can flush locks when it is still reading.
 	// The coprocessor of the txn should not be blocked by itself.
