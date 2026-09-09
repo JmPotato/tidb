@@ -27,3 +27,36 @@ All captures show 2026-09-09 12:56:32–13:00:37 UTC with all business TiDB inst
 ![TiDB X Client RU](tidbx-client-ru.png)
 
 Production scrape intervals/query costs, multiple business keyspaces, and AP workloads were not tested. Refund and reset edge cases were covered by the earlier Prometheus synthetic query tests, not by this SQL workload.
+
+
+## Dashboard placement and section behavior
+
+Whole-dashboard captures use dashboard revision `2d433bfee77ec3c1fdfdfac8904e35f2f195bfa1` and the same retained workload samples. They are normal dashboard views, with no `viewPanel` parameter, at the browser's unchanged 1280×720 viewport. No image stitching or editing was used. Each architecture has three views: all collapsed sections, the expanded Client section entrance, and the end of Client with its adjacent panels and following sections.
+
+Client is the third section after Resource Unit and Resource Details and defaults to collapsed with eight panels. Expanded order is Active Resource Groups (full width), three rows of paired half-width panels, then Client RU (full width). The row immediately above Client RU contains Token Request Handle Duration and Token Request Count; Paging Pre-charge immediately follows Client. All three pairs were checked for matching vertical positions on both architectures, and collapse/re-expand was exercised.
+
+This whole-page test exposed a layout issue hidden by single-panel captures: every Client panel had `y=0`, so Grafana reordered the panels and separated the left/right pairs. The dashboard now assigns Client row offsets 0, 7, 14, 21 and 28. Only Client grid y coordinates changed; panel IDs, queries, and all other sections remain unchanged. `verify-layout.py` failed on `cd1770d8f6` and passed after the fix. Both Jsonnet dashboards were regenerated, `make lint` and `git diff --check` passed, and the full PR diff was reviewed.
+
+Run the layout regression check from the TiDB source checkout at the dashboard revision:
+
+```bash
+python3 /home/coodoo/Projects/tidb-worktrees/pr70973-grafana-evidence/validation/pr70973/verify-layout.py
+```
+
+### Classic whole-dashboard views
+
+![Classic dashboard sections](classic-dashboard-sections.png)
+
+![Classic Client section entry](classic-client-section-entry.png)
+
+![Classic Client RU dashboard position](classic-client-dashboard-position.png)
+
+### TiDB X whole-dashboard views
+
+![TiDB X dashboard sections](tidbx-dashboard-sections.png)
+
+![TiDB X Client section entry](tidbx-client-section-entry.png)
+
+![TiDB X Client RU dashboard position](tidbx-client-dashboard-position.png)
+
+The placement fix does not change accounting or query cost. Validation covers Grafana 10.4.19 at the current desktop viewport; other Grafana versions, viewport sizes and unrelated section layouts were not retested. Prometheus and Grafana were stopped after validation; SQL clusters remained stopped throughout this follow-up.
