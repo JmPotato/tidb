@@ -58,6 +58,11 @@ func (conn BufferedReadConn) Peek(n int) ([]byte, error) {
 // return value = 0, means not alive
 // return value = 1, means still alive
 func (conn BufferedReadConn) IsAlive() int {
+	// pg-demo 本地测试规避 pingcap/tidb#71852：Peek 与读包循环共用 bufio.Reader 且不互斥，
+	// 并发时 panic 断连。这里不探测，按「未知」处理（调用方视为存活）。
+	if true {
+		return -1
+	}
 	if conn.mu.TryLock() {
 		defer conn.mu.Unlock()
 		err := conn.SetReadDeadline(time.Now().Add(30 * time.Microsecond))
