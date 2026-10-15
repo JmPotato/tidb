@@ -677,8 +677,13 @@ func convertJob2RollbackJob(w *worker, jobCtx *jobContext, job *model.Job) (ver 
 		ver, err = rollingBackAlterConstraint(jobCtx, job)
 	case model.ActionCreatePartitionGroup:
 		// Affinity groups may already be created in PD; onCreatePartitionGroup
-		// removes them when the job is rolling back.
-		job.State = model.JobStateRollingback
+		// removes them when the job is rolling back. Decode the args first:
+		// the rolling-back job is persisted with its decoded args.
+		if _, err = model.GetPartitionGroupArgs(job); err != nil {
+			job.State = model.JobStateCancelled
+		} else {
+			job.State = model.JobStateRollingback
+		}
 	case model.ActionDropPartitionGroup:
 		ver, err = cancelOnlyNotHandledJob(job, model.StateNone)
 	default:

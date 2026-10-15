@@ -16,6 +16,7 @@ package ddl_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	"github.com/pingcap/tidb/pkg/testkit"
 	"github.com/pingcap/tidb/pkg/testkit/external"
 	"github.com/stretchr/testify/require"
+	pdhttp "github.com/tikv/pd/client/http"
 )
 
 func enablePartitionGroup(tk *testkit.TestKit) {
@@ -291,4 +293,44 @@ func TestPartitionGroupSignedAndUnsignedMembersAgree(t *testing.T) {
 		want := tk.MustQuery(fmt.Sprintf("select a from s partition (p%d) order by a", p)).Rows()
 		tk.MustQuery(fmt.Sprintf("select a from u partition (p%d) order by a", p)).Check(want)
 	}
+}
+
+// storesUnavailablePDClient fails to list stores, so a create job keeps failing
+// after it has created the PD affinity groups.
+type storesUnavailablePDClient struct{ pdhttp.Client }
+
+func (storesUnavailablePDClient) GetStores(context.Context) (*pdhttp.StoresInfo, error) {
+	return nil, errors.New("mock: store 1 is busy")
+}
+
+func (storesUnavailablePDClient) GetScheduleConfig(context.Context) (map[string]any, error) {
+	return map[string]any{"affinity-schedule-limit": float64(1)}, nil
+}
+
+// A create job cancelled after too many retries keeps its args when it starts
+// rolling back, so the rollback removes the PD groups instead of panicking.
+func TestPartitionGroupCreateRollsBackAfterRetries(t *testing.T) {
+	store := testkit.CreateMockStore(t)
+	tk := testkit.NewTestKit(t, store)
+	enablePartitionGroup(tk)
+	tk.MustExec("set global tidb_ddl_error_count_limit = 3")
+	defer tk.MustExec("set global tidb_ddl_error_count_limit = default")
+	defer affinity.SetPDClientForTest(storesUnavailablePDClient{})()
+
+	tk.MustContainErrMsg("create partition group pg partitions 4", "mock: store 1 is busy")
+	require.Nil(t, getPartitionGroup(t, store, "pg"))
+	job := tk.MustQuery("admin show ddl jobs 1").Rows()[0]
+	require.Equal(t, "create partition group", job[3])
+	require.Equal(t, "rollback done", job[len(job)-2])
+
+	ids := make([]string, 4)
+	for i := range ids {
+		ids[i] = fmt.Sprintf("_tidb_pg%s_%d", job[5], i)
+		if codec := store.GetCodec(); len(codec.GetKeyspace()) > 0 {
+			ids[i] = fmt.Sprintf("_tidb_ks%d_pg%s_%d", codec.GetKeyspaceID(), job[5], i)
+		}
+	}
+	pdGroups, err := affinity.GetGroups(context.Background(), ids)
+	require.NoError(t, err)
+	require.Empty(t, pdGroups)
 }
