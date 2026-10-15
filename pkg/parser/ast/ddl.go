@@ -44,6 +44,7 @@ var (
 	_ DDLNode = &CreatePlacementPolicyStmt{}
 	_ DDLNode = &CreateMaskingPolicyStmt{}
 	_ DDLNode = &CreateResourceGroupStmt{}
+	_ DDLNode = &CreatePartitionGroupStmt{}
 	_ DDLNode = &DropDatabaseStmt{}
 	_ DDLNode = &FlashBackDatabaseStmt{}
 	_ DDLNode = &DropIndexStmt{}
@@ -51,6 +52,7 @@ var (
 	_ DDLNode = &DropSequenceStmt{}
 	_ DDLNode = &DropPlacementPolicyStmt{}
 	_ DDLNode = &DropResourceGroupStmt{}
+	_ DDLNode = &DropPartitionGroupStmt{}
 	_ DDLNode = &OptimizeTableStmt{}
 	_ DDLNode = &RenameTableStmt{}
 	_ DDLNode = &TruncateTableStmt{}
@@ -1509,6 +1511,82 @@ func (n *DropResourceGroupStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*DropResourceGroupStmt)
+	return v.Leave(n)
+}
+
+// CreatePartitionGroupStmt is a statement to create a partition group.
+// A partition group reserves one contiguous physical ID range per partition
+// index, so that the same partition index of all member tables is adjacent in
+// the key space and can be scheduled as one affinity group.
+type CreatePartitionGroupStmt struct {
+	ddlNode
+
+	IfNotExists bool
+	Name        CIStr
+	Partitions  uint64
+	// MaxMembers is the number of member slots reserved in every partition
+	// index range. Zero means the default.
+	MaxMembers uint64
+}
+
+// Restore implements Node interface.
+func (n *CreatePartitionGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if ctx.Flags.HasTiDBSpecialCommentFlag() {
+		return restoreStmtInSpecialComment(ctx, n, tidb.FeatureIDPartitionGroup)
+	}
+	ctx.WriteKeyWord("CREATE PARTITION GROUP ")
+	if n.IfNotExists {
+		ctx.WriteKeyWord("IF NOT EXISTS ")
+	}
+	ctx.WriteName(n.Name.O)
+	ctx.WriteKeyWord(" PARTITIONS ")
+	ctx.WritePlainf("%d", n.Partitions)
+	if n.MaxMembers > 0 {
+		ctx.WriteKeyWord(" MAX_MEMBERS ")
+		ctx.WritePlain("= ")
+		ctx.WritePlainf("%d", n.MaxMembers)
+	}
+	return nil
+}
+
+// Accept implements Node Accept interface.
+func (n *CreatePartitionGroupStmt) Accept(v Visitor) (Node, bool) {
+	newNode, skipChildren := v.Enter(n)
+	if skipChildren {
+		return v.Leave(newNode)
+	}
+	n = newNode.(*CreatePartitionGroupStmt)
+	return v.Leave(n)
+}
+
+// DropPartitionGroupStmt is a statement to drop a partition group.
+type DropPartitionGroupStmt struct {
+	ddlNode
+
+	IfExists bool
+	Name     CIStr
+}
+
+// Restore implements Node interface.
+func (n *DropPartitionGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if ctx.Flags.HasTiDBSpecialCommentFlag() {
+		return restoreStmtInSpecialComment(ctx, n, tidb.FeatureIDPartitionGroup)
+	}
+	ctx.WriteKeyWord("DROP PARTITION GROUP ")
+	if n.IfExists {
+		ctx.WriteKeyWord("IF EXISTS ")
+	}
+	ctx.WriteName(n.Name.O)
+	return nil
+}
+
+// Accept implements Node Accept interface.
+func (n *DropPartitionGroupStmt) Accept(v Visitor) (Node, bool) {
+	newNode, skipChildren := v.Enter(n)
+	if skipChildren {
+		return v.Leave(newNode)
+	}
+	n = newNode.(*DropPartitionGroupStmt)
 	return v.Leave(n)
 }
 
@@ -3400,6 +3478,7 @@ const (
 	TableOptionSequence
 	TableOptionAffinity
 	TableOptionStartTransaction
+	TableOptionPartitionGroup
 	TableOptionPlacementPolicy = TableOptionType(PlacementOptionPolicy)
 	TableOptionStatsBuckets    = TableOptionType(StatsOptionBuckets)
 	TableOptionStatsTopN       = TableOptionType(StatsOptionTopN)
@@ -3840,6 +3919,13 @@ func (n *TableOption) Restore(ctx *format.RestoreCtx) error {
 		})
 	case TableOptionStartTransaction:
 		ctx.WriteKeyWord("START TRANSACTION")
+	case TableOptionPartitionGroup:
+		_ = ctx.WriteWithSpecialComments(tidb.FeatureIDPartitionGroup, func() error {
+			ctx.WriteKeyWord("PARTITION_GROUP ")
+			ctx.WritePlain("= ")
+			ctx.WriteString(n.StrValue)
+			return nil
+		})
 	default:
 		return errors.Errorf("invalid TableOption: %d", n.Tp)
 	}

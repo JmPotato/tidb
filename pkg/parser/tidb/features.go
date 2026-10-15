@@ -46,6 +46,8 @@ const (
 	FeatureIDAffinity = "affinity"
 	// FeatureIDSplitRegion is the `region split` feature.
 	FeatureIDSplitRegion = "region_split"
+	// FeatureIDPartitionGroup is the `Partition Group` feature.
+	FeatureIDPartitionGroup = "partition_group"
 )
 
 var featureIDs = map[string]struct{}{
@@ -61,6 +63,7 @@ var featureIDs = map[string]struct{}{
 	FeatureIDAutoPreSplit:   {},
 	FeatureIDAffinity:       {},
 	FeatureIDSplitRegion:    {},
+	FeatureIDPartitionGroup: {},
 }
 
 // CanParseFeature is used to check if a feature can be parsed.

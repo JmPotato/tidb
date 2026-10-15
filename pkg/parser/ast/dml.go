@@ -3235,6 +3235,8 @@ const (
 	ShowDistributionJobs
 	ShowAffinity
 	ShowStorageClassTransitions
+	ShowPartitionGroups
+	ShowPartitionGroupStatus
 	// showTpCount is the count of all kinds of `SHOW` statements.
 	showTpCount
 )
@@ -3286,6 +3288,8 @@ type ShowStmt struct {
 	ShowProfileLimit *Limit // Used for `SHOW PROFILE` syntax
 
 	ShowGroupKey string // Used for `SHOW IMPORT GROUP <GROUP_KEY>` syntax
+
+	PartitionGroupName CIStr // Used for `SHOW PARTITION GROUP STATUS <name>` syntax
 
 	ImportJobID  *int64 // Used for `SHOW IMPORT JOB <ID>` syntax
 	ImportJobRaw bool   // Used for `SHOW RAW IMPORT JOB(S)` syntax
@@ -3663,6 +3667,12 @@ func (n *ShowStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord("REPLICA STATUS")
 		case ShowStorageClassTransitions:
 			ctx.WriteKeyWord("STORAGE_CLASS TRANSITIONS")
+		case ShowPartitionGroups:
+			ctx.WriteKeyWord("PARTITION GROUPS")
+		case ShowPartitionGroupStatus:
+			ctx.WriteKeyWord("PARTITION GROUP STATUS ")
+			ctx.WriteName(n.PartitionGroupName.O)
+			return nil
 		default:
 			return errors.New("Unknown ShowStmt type")
 		}

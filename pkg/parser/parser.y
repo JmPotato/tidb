@@ -523,6 +523,7 @@ func getMaskingPolicyRestrictOp(name string) (ast.MaskingPolicyRestrictOps, bool
 	materialized               "MATERIALIZED"
 	maxConnectionsPerHour      "MAX_CONNECTIONS_PER_HOUR"
 	max_idxnum                 "MAX_IDXNUM"
+	maxMembers                 "MAX_MEMBERS"
 	max_minutes                "MAX_MINUTES"
 	maxQueriesPerHour          "MAX_QUERIES_PER_HOUR"
 	maxRows                    "MAX_ROWS"
@@ -576,6 +577,7 @@ func getMaskingPolicyRestrictOp(name string) (ast.MaskingPolicyRestrictOps, bool
 	pageCompressionLevel       "PAGE_COMPRESSION_LEVEL"
 	parser                     "PARSER"
 	partial                    "PARTIAL"
+	partitionGroup             "PARTITION_GROUP"
 	partitioning               "PARTITIONING"
 	partitions                 "PARTITIONS"
 	password                   "PASSWORD"
@@ -1061,6 +1063,7 @@ func getMaskingPolicyRestrictOp(name string) (ast.MaskingPolicyRestrictOps, bool
 	CreateProcedureStmt           "CREATE PROCEDURE statement"
 	AddQueryWatchStmt             "ADD QUERY WATCH statement"
 	CreateResourceGroupStmt       "CREATE RESOURCE GROUP statement"
+	CreatePartitionGroupStmt      "CREATE PARTITION GROUP statement"
 	CreateSequenceStmt            "CREATE SEQUENCE statement"
 	CreateStatisticsStmt          "CREATE STATISTICS statement"
 	DoStmt                        "Do statement"
@@ -1069,6 +1072,7 @@ func getMaskingPolicyRestrictOp(name string) (ast.MaskingPolicyRestrictOps, bool
 	DropProcedureStmt             "DROP PROCEDURE statement"
 	DropQueryWatchStmt            "DROP QUERY WATCH statement"
 	DropResourceGroupStmt         "DROP RESOURCE GROUP statement"
+	DropPartitionGroupStmt        "DROP PARTITION GROUP statement"
 	DropStatisticsStmt            "DROP STATISTICS statement"
 	DropStatsStmt                 "DROP STATS statement"
 	DropTableStmt                 "DROP TABLE statement"
@@ -1172,6 +1176,7 @@ func getMaskingPolicyRestrictOp(name string) (ast.MaskingPolicyRestrictOps, bool
 	ProcedureLeave                "The leave statement in procedure, expressed by `leave ...`"
 
 %type	<item>
+	PartitionGroupMaxMembersOpt            "MAX_MEMBERS option of CREATE PARTITION GROUP"
 	AdminShowSlow                          "Admin Show Slow statement"
 	AdminStmtLimitOpt                      "Admin show ddl jobs limit option"
 	LikeOrIlikeEscapeOpt                   "like or ilike escape option"
@@ -7909,6 +7914,8 @@ UnReservedKeyword:
 |	"MAX_QUERIES_PER_HOUR"
 |	"MAX_UPDATES_PER_HOUR"
 |	"MAX_USER_CONNECTIONS"
+|	"MAX_MEMBERS"
+|	"PARTITION_GROUP"
 |	"MASKING"
 |	"REPLICATION"
 |	"CLIENT"
@@ -12662,6 +12669,13 @@ ShowStmt:
 			Table: $4.(*ast.TableName),
 		}
 	}
+|	"SHOW" "PARTITION" "GROUP" "STATUS" Identifier
+	{
+		$$ = &ast.ShowStmt{
+			Tp:                 ast.ShowPartitionGroupStatus,
+			PartitionGroupName: ast.NewCIStr($5),
+		}
+	}
 |	"SHOW" "CREATE" "VIEW" TableName
 	{
 		$$ = &ast.ShowStmt{
@@ -13206,6 +13220,19 @@ ShowTargetFilterable:
 	{
 		$$ = &ast.ShowStmt{Tp: ast.ShowPlacementLabels}
 	}
+|	"PARTITION" "GROUPS"
+	{
+		$$ = &ast.ShowStmt{Tp: ast.ShowPartitionGroups}
+	}
+|	"PARTITION" Identifier
+	{
+		// GROUPS is only a token when window functions are enabled.
+		if !strings.EqualFold($2, "GROUPS") {
+			yylex.AppendError(yylex.Errorf("unknown SHOW PARTITION target: %s", $2))
+			return 1
+		}
+		$$ = &ast.ShowStmt{Tp: ast.ShowPartitionGroups}
+	}
 |	"IMPORT" "GROUPS"
 	{
 		$$ = &ast.ShowStmt{Tp: ast.ShowImportGroups}
@@ -13496,6 +13523,7 @@ Statement:
 |	CreateMaskingPolicyStmt
 |	CreateProcedureStmt
 |	CreateResourceGroupStmt
+|	CreatePartitionGroupStmt
 |	AddQueryWatchStmt
 |	CreateSequenceStmt
 |	CreateStatisticsStmt
@@ -13512,6 +13540,7 @@ Statement:
 |	DropViewStmt
 |	DropUserStmt
 |	DropResourceGroupStmt
+|	DropPartitionGroupStmt
 |	DropQueryWatchStmt
 |	DropRoleStmt
 |	DropStatisticsStmt
@@ -13997,6 +14026,10 @@ TableOption:
 |	"AFFINITY" EqOpt StringName
 	{
 		$$ = &ast.TableOption{Tp: ast.TableOptionAffinity, StrValue: $3}
+	}
+|	"PARTITION_GROUP" EqOpt StringName
+	{
+		$$ = &ast.TableOption{Tp: ast.TableOptionPartitionGroup, StrValue: $3}
 	}
 /* MariaDB specific options
  * - https://mariadb.com/docs/server/reference/sql-statements/data-definition/create/create-table
@@ -16956,6 +16989,35 @@ AlterResourceGroupStmt:
 			IfExists:                $4.(bool),
 			ResourceGroupName:       ast.NewCIStr($5),
 			ResourceGroupOptionList: $6.([]*ast.ResourceGroupOption),
+		}
+	}
+
+CreatePartitionGroupStmt:
+	"CREATE" "PARTITION" "GROUP" IfNotExists Identifier "PARTITIONS" LengthNum PartitionGroupMaxMembersOpt
+	{
+		$$ = &ast.CreatePartitionGroupStmt{
+			IfNotExists: $4.(bool),
+			Name:        ast.NewCIStr($5),
+			Partitions:  $7.(uint64),
+			MaxMembers:  $8.(uint64),
+		}
+	}
+
+PartitionGroupMaxMembersOpt:
+	{
+		$$ = uint64(0)
+	}
+|	"MAX_MEMBERS" EqOpt LengthNum
+	{
+		$$ = $3.(uint64)
+	}
+
+DropPartitionGroupStmt:
+	"DROP" "PARTITION" "GROUP" IfExists Identifier
+	{
+		$$ = &ast.DropPartitionGroupStmt{
+			IfExists: $4.(bool),
+			Name:     ast.NewCIStr($5),
 		}
 	}
 

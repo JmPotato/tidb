@@ -234,6 +234,20 @@ func (n *DropResourceGroupStmt) AcceptInPlace(v InPlaceVisitor) bool {
 	return v.Leave(n)
 }
 
+func (n *CreatePartitionGroupStmt) AcceptInPlace(v InPlaceVisitor) bool {
+	if skipChildren := v.Enter(n); skipChildren {
+		return v.Leave(n)
+	}
+	return v.Leave(n)
+}
+
+func (n *DropPartitionGroupStmt) AcceptInPlace(v InPlaceVisitor) bool {
+	if skipChildren := v.Enter(n); skipChildren {
+		return v.Leave(n)
+	}
+	return v.Leave(n)
+}
+
 func (n *OptimizeTableStmt) AcceptInPlace(v InPlaceVisitor) bool {
 	if skipChildren := v.Enter(n); skipChildren {
 		return v.Leave(n)

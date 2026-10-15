@@ -8675,3 +8675,29 @@ func TestSplitPartition(t *testing.T) {
 	}
 	RunTest(t, cases, false, false)
 }
+
+func TestPartitionGroup(t *testing.T) {
+	table := []testCase{
+		{"create partition group g partitions 64", true, "CREATE PARTITION GROUP `g` PARTITIONS 64"},
+		{"create partition group if not exists g partitions 64 max_members = 1024", true, "CREATE PARTITION GROUP IF NOT EXISTS `g` PARTITIONS 64 MAX_MEMBERS = 1024"},
+		{"create partition group g partitions 8 max_members 16", true, "CREATE PARTITION GROUP `g` PARTITIONS 8 MAX_MEMBERS = 16"},
+		{"create partition group g", false, ""},
+		{"create partition group g partitions -1", false, ""},
+		{"drop partition group g", true, "DROP PARTITION GROUP `g`"},
+		{"drop partition group if exists g", true, "DROP PARTITION GROUP IF EXISTS `g`"},
+
+		{"create table t (a int) partition_group = 'g' partition by hash (a) partitions 4", true, "CREATE TABLE `t` (`a` INT) PARTITION_GROUP = 'g' PARTITION BY HASH (`a`) PARTITIONS 4"},
+		{"create table t (a int) /*T![partition_group] PARTITION_GROUP = 'g' */ partition by hash (a) partitions 4", true, "CREATE TABLE `t` (`a` INT) PARTITION_GROUP = 'g' PARTITION BY HASH (`a`) PARTITIONS 4"},
+		{"create table t (a int) partition_group = 1", false, ""},
+
+		{"show partition groups", true, "SHOW PARTITION GROUPS"},
+		{"show partition tables", false, ""},
+		{"show partition groups like 'g%'", true, "SHOW PARTITION GROUPS LIKE _UTF8MB4'g%'"},
+		{"show partition group status g", true, "SHOW PARTITION GROUP STATUS `g`"},
+
+		// The new keywords stay usable as identifiers.
+		{"create table partition_group (max_members int)", true, "CREATE TABLE `partition_group` (`max_members` INT)"},
+	}
+	RunTest(t, table, false, false)
+	RunTest(t, table, true, false)
+}
