@@ -1823,6 +1823,12 @@ var defaultSysVars = []*SysVar{
 	}, GetGlobal: func(_ context.Context, s *SessionVars) (string, error) {
 		return BoolToOnOff(vardef.EnableDistTask.Load()), nil
 	}},
+	{Scope: vardef.ScopeGlobal, Name: vardef.TiDBEnablePartitionGroup, Value: BoolToOnOff(vardef.DefTiDBEnablePartitionGroup), Type: vardef.TypeBool, SetGlobal: func(_ context.Context, s *SessionVars, val string) error {
+		vardef.EnablePartitionGroup.Store(TiDBOptOn(val))
+		return nil
+	}, GetGlobal: func(_ context.Context, s *SessionVars) (string, error) {
+		return BoolToOnOff(vardef.EnablePartitionGroup.Load()), nil
+	}},
 	{Scope: vardef.ScopeGlobal, Name: vardef.TiDBEnableFastCreateTable, Value: BoolToOnOff(vardef.DefTiDBEnableFastCreateTable), Type: vardef.TypeBool, SetGlobal: func(_ context.Context, s *SessionVars, val string) error {
 		if vardef.EnableFastCreateTable.Load() != TiDBOptOn(val) {
 			vardef.EnableFastCreateTable.Store(TiDBOptOn(val))

@@ -528,6 +528,13 @@ var (
 	)
 	// ErrInvalidTableAffinity is returned when set an invalid affinity value on a table
 	ErrInvalidTableAffinity = ClassDDL.NewStd(mysql.ErrInvalidAffinityOption)
+
+	// ErrPartitionGroupNotExists is returned when the referenced partition group does not exist.
+	ErrPartitionGroupNotExists = ClassDDL.NewStdErr(mysql.ErrPartitionGroup, parser_mysql.Message("Unknown partition group '%s'", nil))
+	// ErrPartitionGroupExists is returned when creating a partition group that already exists.
+	ErrPartitionGroupExists = ClassDDL.NewStdErr(mysql.ErrPartitionGroup, parser_mysql.Message("Partition group '%s' already exists", nil))
+	// ErrInvalidPartitionGroup is returned when a statement violates the partition group contract.
+	ErrInvalidPartitionGroup = ClassDDL.NewStd(mysql.ErrPartitionGroup)
 	// ErrForbiddenDDL is returned when a DDL operation is forbidden.
 	ErrForbiddenDDL = ClassDDL.NewStd(mysql.ErrForbiddenDDL)
 )

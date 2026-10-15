@@ -184,6 +184,9 @@ func GenGIDAndInsertJobsWithRetry(
 				}
 			})
 			assignGIDsForJobs(specs, ids)
+			if err = assignPartitionGroupIDs(m, specs); err != nil {
+				return errors.Trace(err)
+			}
 
 			if beforeInsertWithAssignedIDs != nil {
 				cleanup = beforeInsertWithAssignedIDs(specs)
@@ -267,7 +270,7 @@ func getRequiredGIDCount(specs []*JobSpec) int {
 			for _, tblArgs := range args.Tables {
 				count += idCountForTable(tblArgs.TableInfo)
 			}
-		case model.ActionCreateSchema, model.ActionCreateResourceGroup:
+		case model.ActionCreateSchema, model.ActionCreateResourceGroup, model.ActionCreatePartitionGroup:
 			count++
 		case model.ActionAlterTablePartitioning:
 			args := spec.Args.(*model.TablePartitionArgs)
@@ -330,6 +333,12 @@ func assignGIDsForJobs(specs []*JobSpec, ids []int64) {
 				args := spec.Args.(*model.ResourceGroupArgs)
 				args.RGInfo.ID = alloc.next()
 			}
+		case model.ActionCreatePartitionGroup:
+			if !spec.IDAllocated {
+				args := spec.Args.(*model.PartitionGroupArgs)
+				args.PGInfo.ID = alloc.next()
+			}
+			spec.Job.SchemaID = spec.Args.(*model.PartitionGroupArgs).PGInfo.ID
 		case model.ActionAlterTablePartitioning:
 			if !spec.IDAllocated {
 				args := spec.Args.(*model.TablePartitionArgs)

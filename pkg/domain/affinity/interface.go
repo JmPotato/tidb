@@ -16,7 +16,13 @@ package affinity
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"slices"
 	"time"
+
+	"github.com/pingcap/errors"
 
 	"github.com/pingcap/tidb/pkg/util/logutil"
 	pdhttp "github.com/tikv/pd/client/http"
@@ -93,6 +99,107 @@ func GetGroups(ctx context.Context, ids []string) (map[string]*pdhttp.AffinityGr
 		return make(map[string]*pdhttp.AffinityGroupState), nil
 	}
 	return manager.GetAffinityGroups(ctx, ids)
+}
+
+// UpdateGroupPeers sets the leader and voter stores of an affinity group.
+func UpdateGroupPeers(ctx context.Context, id string, leaderStoreID uint64, voterStoreIDs []uint64) error {
+	return manager.UpdateAffinityGroupPeers(ctx, id, leaderStoreID, voterStoreIDs)
+}
+
+// ListUpStoreIDs returns the IDs of the TiKV stores that are Up, in ascending
+// order. It returns nil when there is no PD client, for example in unit tests
+// with a mock store.
+func ListUpStoreIDs(ctx context.Context) ([]uint64, error) {
+	if pdClient == nil {
+		return nil, nil
+	}
+	stores, err := pdClient.GetStores(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uint64, 0, len(stores.Stores))
+	for _, s := range stores.Stores {
+		if s.Store.StateName != "Up" || isTiFlashStore(s.Store.Labels) {
+			continue
+		}
+		ids = append(ids, uint64(s.Store.ID))
+	}
+	slices.Sort(ids)
+	return ids, nil
+}
+
+func isTiFlashStore(labels []pdhttp.StoreLabel) bool {
+	for _, l := range labels {
+		if l.Key == "engine" && (l.Value == "tiflash" || l.Value == "tiflash_compute") {
+			return true
+		}
+	}
+	return false
+}
+
+// GetAffinityScheduleLimit returns PD schedule.affinity-schedule-limit. ok is
+// false when there is no PD client or the value cannot be read.
+func GetAffinityScheduleLimit(ctx context.Context) (limit uint64, ok bool) {
+	if pdClient == nil {
+		return 0, false
+	}
+	cfg, err := pdClient.GetScheduleConfig(ctx)
+	if err != nil {
+		return 0, false
+	}
+	v, ok := cfg["affinity-schedule-limit"].(float64)
+	if !ok {
+		return 0, false
+	}
+	return uint64(v), true
+}
+
+// GetRegionsInRange returns the Regions that overlap [startKey, endKey), whose
+// keys are already encoded for PD. It returns nil when there is no PD client.
+func GetRegionsInRange(ctx context.Context, startKey, endKey []byte) ([]pdhttp.RegionInfo, error) {
+	if pdClient == nil {
+		return nil, nil
+	}
+	regions, err := pdClient.GetRegionsByKeyRange(ctx, pdhttp.NewKeyRange(startKey, endKey), -1)
+	if err != nil {
+		return nil, err
+	}
+	return regions.Regions, nil
+}
+
+// GetGroupLeaderSources returns the leader_source reported by PD for each
+// group: "explicit" when the target was set through the API, "fallback" when
+// PD derived it from the first observed Region, and "" when PD has no target
+// or does not report the field. The vendored PD HTTP client predates the
+// field, so the response body is decoded here.
+func GetGroupLeaderSources(ctx context.Context, ids []string) (map[string]string, error) {
+	if pdClient == nil || len(ids) == 0 {
+		return map[string]string{}, nil
+	}
+	var raw struct {
+		AffinityGroups map[string]struct {
+			LeaderSource string `json:"leader_source"`
+		} `json:"affinity_groups"`
+	}
+	cli := pdClient.WithRespHandler(func(resp *http.Response, _ any) error {
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("get affinity groups: status %d: %s", resp.StatusCode, body)
+		}
+		return json.Unmarshal(body, &raw)
+	})
+	if _, err := cli.GetAllAffinityGroups(ctx); err != nil {
+		return nil, err
+	}
+	sources := make(map[string]string, len(ids))
+	for _, id := range ids {
+		sources[id] = raw.AffinityGroups[id].LeaderSource
+	}
+	return sources, nil
 }
 
 // GetAllGroupStates gets all affinity group states from PD.

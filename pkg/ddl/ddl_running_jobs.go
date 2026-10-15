@@ -56,6 +56,7 @@ type objects struct {
 	schemas           map[string]map[string]int
 	placementPolicies map[string]int
 	resourceGroups    map[string]int
+	partitionGroups   map[string]int
 }
 
 func newObjects() *objects {
@@ -63,11 +64,12 @@ func newObjects() *objects {
 		schemas:           make(map[string]map[string]int),
 		placementPolicies: make(map[string]int),
 		resourceGroups:    make(map[string]int),
+		partitionGroups:   make(map[string]int),
 	}
 }
 
 func (o *objects) empty() bool {
-	return len(o.schemas) == 0 && len(o.placementPolicies) == 0 && len(o.resourceGroups) == 0
+	return len(o.schemas) == 0 && len(o.placementPolicies) == 0 && len(o.resourceGroups) == 0 && len(o.partitionGroups) == 0
 }
 
 func newRunningJobs() *runningJobs {
@@ -145,10 +147,17 @@ func (j *runningJobs) checkRunnable(jobID int64, involves []model.InvolvingSchem
 				}
 				// model.InvolvingSchemaInfo is like an enumerate type
 				intest.Assert(
-					info.Policy == "" && info.ResourceGroup == "",
+					info.Policy == "" && info.ResourceGroup == "" && info.PartitionGroup == "",
 					"InvolvingSchemaInfo should be like an enumerate type: %#v",
 					info,
 				)
+				continue
+			}
+
+			if info.PartitionGroup != "" {
+				if _, ok := checkingObj.partitionGroups[info.PartitionGroup]; ok {
+					return false
+				}
 				continue
 			}
 
@@ -230,6 +239,9 @@ func (j *runningJobs) addRunning(jobID int64, involves []model.InvolvingSchemaIn
 		if info.ResourceGroup != model.InvolvingNone {
 			toAdd.resourceGroups[info.ResourceGroup]++
 		}
+		if info.PartitionGroup != model.InvolvingNone {
+			toAdd.partitionGroups[info.PartitionGroup]++
+		}
 	}
 }
 
@@ -296,6 +308,13 @@ func (j *runningJobs) removeRunningWithoutLock(jobID int64, involves []model.Inv
 				delete(toRemove.resourceGroups, info.ResourceGroup)
 			}
 		}
+
+		if len(info.PartitionGroup) > 0 {
+			toRemove.partitionGroups[info.PartitionGroup]--
+			if toRemove.partitionGroups[info.PartitionGroup] == 0 {
+				delete(toRemove.partitionGroups, info.PartitionGroup)
+			}
+		}
 	}
 }
 
@@ -324,6 +343,9 @@ func (j *runningJobs) addPendingWithoutLock(involves []model.InvolvingSchemaInfo
 		}
 		if info.ResourceGroup != model.InvolvingNone {
 			j.pending.resourceGroups[info.ResourceGroup]++
+		}
+		if info.PartitionGroup != model.InvolvingNone {
+			j.pending.partitionGroups[info.PartitionGroup]++
 		}
 	}
 }

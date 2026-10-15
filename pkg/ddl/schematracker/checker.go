@@ -540,6 +540,16 @@ func (*Checker) AlterPlacementPolicy(_ sessionctx.Context, _ *ast.AlterPlacement
 	panic("implement me")
 }
 
+// CreatePartitionGroup implements the DDL interface.
+func (c *Checker) CreatePartitionGroup(ctx sessionctx.Context, stmt *ast.CreatePartitionGroupStmt) error {
+	return c.realExecutor.CreatePartitionGroup(ctx, stmt)
+}
+
+// DropPartitionGroup implements the DDL interface.
+func (c *Checker) DropPartitionGroup(ctx sessionctx.Context, stmt *ast.DropPartitionGroupStmt) error {
+	return c.realExecutor.DropPartitionGroup(ctx, stmt)
+}
+
 // AddResourceGroup implements the DDL interface.
 // ResourceGroup do not affect the transaction.
 func (*Checker) AddResourceGroup(_ sessionctx.Context, _ *ast.CreateResourceGroupStmt) error {

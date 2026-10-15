@@ -132,6 +132,8 @@ const (
 	ActionAlterMaterializedViewRefresh          ActionType = 89
 	ActionAlterMaterializedViewLogPurge         ActionType = 90
 	ActionAlterMaterializedViewAttributes       ActionType = 91
+	ActionCreatePartitionGroup                  ActionType = 92
+	ActionDropPartitionGroup                    ActionType = 93
 
 	// range [200, 256) is reserved for a downstream fork
 )
@@ -224,6 +226,8 @@ var ActionMap = map[ActionType]string{
 	ActionAlterMaterializedViewRefresh:          "alter materialized view refresh",
 	ActionAlterMaterializedViewLogPurge:         "alter materialized view log purge",
 	ActionAlterMaterializedViewAttributes:       "alter materialized view attributes",
+	ActionCreatePartitionGroup:                  "create partition group",
+	ActionDropPartitionGroup:                    "drop partition group",
 
 	// `ActionAlterTableAlterPartition` is removed and will never be used.
 	// Just left a tombstone here for compatibility.
@@ -956,6 +960,7 @@ func (job *Job) NormalizeInvolvingSchemaInfo() {
 		item.Table = normalizeInvolvingName(item.Table)
 		item.Policy = normalizeInvolvingName(item.Policy)
 		item.ResourceGroup = normalizeInvolvingName(item.ResourceGroup)
+		item.PartitionGroup = normalizeInvolvingName(item.PartitionGroup)
 	}
 }
 
@@ -980,13 +985,16 @@ func (job *Job) CheckInvolvingSchemaInfo() error {
 		if info.ResourceGroup != InvolvingNone {
 			involvedObjTypes++
 		}
+		if info.PartitionGroup != InvolvingNone {
+			involvedObjTypes++
+		}
 		if info.Database != InvolvingNone || info.Table != InvolvingNone {
 			involvedObjTypes++
 		}
 		if involvedObjTypes != 1 {
-			return errors.New("InvolvingSchemaInfo must involve only one type of object among database/table, placement policy, resource group")
+			return errors.New("InvolvingSchemaInfo must involve only one type of object among database/table, placement policy, resource group, partition group")
 		}
-		if info.Policy == InvolvingNone && info.ResourceGroup == InvolvingNone {
+		if info.Policy == InvolvingNone && info.ResourceGroup == InvolvingNone && info.PartitionGroup == InvolvingNone {
 			if info.Database == InvolvingNone || info.Table == InvolvingNone {
 				return errors.New("DDL job operating on schema or table, must have non-empty name set in InvolvingSchemaInfo")
 			} else if info.Database == InvolvingAll && info.Table != InvolvingAll {
@@ -1181,11 +1189,13 @@ type JobMeta struct {
 // (Database&Table, Policy, ResourceGroup) should only be set in a
 // InvolvingSchemaInfo.
 type InvolvingSchemaInfo struct {
-	Database      string                  `json:"database,omitempty"`
-	Table         string                  `json:"table,omitempty"`
-	Policy        string                  `json:"policy,omitempty"`
-	ResourceGroup string                  `json:"resource_group,omitempty"`
-	Mode          InvolvingSchemaInfoMode `json:"mode,omitempty"`
+	Database      string `json:"database,omitempty"`
+	Table         string `json:"table,omitempty"`
+	Policy        string `json:"policy,omitempty"`
+	ResourceGroup string `json:"resource_group,omitempty"`
+	// PartitionGroup is the lower-case name of a partition group.
+	PartitionGroup string                  `json:"partition_group,omitempty"`
+	Mode           InvolvingSchemaInfoMode `json:"mode,omitempty"`
 }
 
 // InvolvingSchemaInfoMode is used by InvolvingSchemaInfo.Mode.

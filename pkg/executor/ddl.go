@@ -241,6 +241,10 @@ func (e *DDLExec) Next(ctx context.Context, _ *chunk.Chunk) (err error) {
 		err = e.executeDropResourceGroup(x)
 	case *ast.AlterResourceGroupStmt:
 		err = e.executeAlterResourceGroup(x)
+	case *ast.CreatePartitionGroupStmt:
+		err = e.ddlExecutor.CreatePartitionGroup(e.Ctx(), x)
+	case *ast.DropPartitionGroupStmt:
+		err = e.ddlExecutor.DropPartitionGroup(e.Ctx(), x)
 	}
 	if err != nil {
 		// If the owner return ErrTableNotExists error when running this DDL, it may be caused by schema changed,

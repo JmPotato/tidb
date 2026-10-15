@@ -91,6 +91,10 @@ func createTable(w *worker, jobCtx *jobContext, job *model.Job, r autoid.Require
 		}
 		return tbInfo, errors.Trace(err)
 	}
+	if err = checkPartitionGroupMemberOnOwner(metaMut, tbInfo); err != nil {
+		job.State = model.JobStateCancelled
+		return tbInfo, errors.Trace(err)
+	}
 	// Allocate foreign key ID.
 	for _, fkInfo := range tbInfo.ForeignKeys {
 		fkInfo.ID = allocateFKIndexID(tbInfo)
@@ -1071,6 +1075,10 @@ func handleTableOptions(options []*ast.TableOption, tbInfo *model.TableInfo) err
 				return errors.Trace(dbterror.ErrInvalidTableAffinity.GenWithStackByArgs(fmt.Sprintf("'%s'", op.StrValue)))
 			}
 			tbInfo.Affinity = affinity
+		case ast.TableOptionPartitionGroup:
+			// The group is resolved and the member contract is checked by
+			// checkPartitionGroupMember before the job is submitted.
+			tbInfo.PartitionGroup = &model.PartitionGroupRefInfo{Name: ast.NewCIStr(op.StrValue)}
 		case ast.TableOptionEngineAttribute, ast.TableOptionStorageClass:
 		}
 	}

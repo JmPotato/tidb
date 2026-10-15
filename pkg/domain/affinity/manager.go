@@ -33,6 +33,7 @@ type Manager interface {
 	CreateAffinityGroupsIfNotExists(ctx context.Context, groups map[string][]pdhttp.AffinityGroupKeyRange) error
 	DeleteAffinityGroups(ctx context.Context, ids []string) error
 	GetAffinityGroups(ctx context.Context, ids []string) (map[string]*pdhttp.AffinityGroupState, error)
+	UpdateAffinityGroupPeers(ctx context.Context, id string, leaderStoreID uint64, voterStoreIDs []uint64) error
 }
 
 type pdManager struct {
@@ -81,6 +82,11 @@ func (m *pdManager) DeleteAffinityGroups(ctx context.Context, ids []string) erro
 }
 
 // GetAffinityGroups gets affinity groups from PD.
+func (m *pdManager) UpdateAffinityGroupPeers(ctx context.Context, id string, leaderStoreID uint64, voterStoreIDs []uint64) error {
+	_, err := m.Client.UpdateAffinityGroupPeers(ctx, id, leaderStoreID, voterStoreIDs)
+	return err
+}
+
 func (m *pdManager) GetAffinityGroups(ctx context.Context, ids []string) (map[string]*pdhttp.AffinityGroupState, error) {
 	if len(ids) == 0 {
 		return make(map[string]*pdhttp.AffinityGroupState), nil
@@ -298,4 +304,16 @@ func (m *mockManager) GetAffinityGroups(_ context.Context, ids []string) (map[st
 		}
 	}
 	return result, nil
+}
+
+func (m *mockManager) UpdateAffinityGroupPeers(_ context.Context, id string, leaderStoreID uint64, voterStoreIDs []uint64) error {
+	m.Lock()
+	defer m.Unlock()
+	state, ok := m.groups[id]
+	if !ok {
+		return errors.Errorf("affinity group %s not found", id)
+	}
+	state.LeaderStoreID = leaderStoreID
+	state.VoterStoreIDs = append([]uint64(nil), voterStoreIDs...)
+	return nil
 }

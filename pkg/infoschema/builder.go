@@ -110,6 +110,9 @@ func (b *Builder) ApplyDiff(m meta.Reader, diff *model.SchemaDiff) ([]int64, err
 		return applyExchangeTablePartition(b, m, diff)
 	case model.ActionFlashbackCluster:
 		return []int64{-1}, nil
+	case model.ActionCreatePartitionGroup, model.ActionDropPartitionGroup:
+		// Partition groups are read from meta directly and not cached here.
+		return nil, nil
 	case model.ActionRefreshMeta:
 		return applyRefreshMeta(b, m, diff)
 	default:

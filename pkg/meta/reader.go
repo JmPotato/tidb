@@ -55,6 +55,8 @@ type Reader interface {
 	GetRUStats() (*RUStats, error)
 	GetResourceGroup(groupID int64) (*model.ResourceGroupInfo, error)
 	ListResourceGroups() ([]*model.ResourceGroupInfo, error)
+	ListPartitionGroups() ([]*model.PartitionGroupInfo, error)
+	GetPartitionGroup(groupID int64) (*model.PartitionGroupInfo, error)
 
 	GetMetasByDBID(dbID int64) ([]structure.HashPair, error)
 	GetGlobalID() (int64, error)

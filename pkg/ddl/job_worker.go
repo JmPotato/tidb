@@ -1140,6 +1140,10 @@ func (w *worker) runOneJobStep(
 		ver, err = onAlterResourceGroup(jobCtx, job)
 	case model.ActionDropResourceGroup:
 		ver, err = onDropResourceGroup(jobCtx, job)
+	case model.ActionCreatePartitionGroup:
+		ver, err = onCreatePartitionGroup(jobCtx, job)
+	case model.ActionDropPartitionGroup:
+		ver, err = onDropPartitionGroup(jobCtx, job)
 	case model.ActionAlterCacheTable:
 		ver, err = onAlterCacheTable(jobCtx, job)
 	case model.ActionAlterNoCacheTable:

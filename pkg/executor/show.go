@@ -120,6 +120,8 @@ type ShowExec struct {
 	ImportJobID       *int64
 	DistributionJobID *int64
 	ImportGroupKey    string // Used for SHOW IMPORT GROUP <GROUP_KEY>
+
+	PartitionGroupName ast.CIStr // Used for SHOW PARTITION GROUP STATUS <name>
 }
 
 type showTableRegionRowItem struct {
@@ -297,6 +299,10 @@ func (e *ShowExec) fetchAll(ctx context.Context) error {
 		return e.fetchShowAffinity(ctx)
 	case ast.ShowStorageClassTransitions:
 		return e.fetchShowStorageClassTransitions(ctx)
+	case ast.ShowPartitionGroups:
+		return e.fetchShowPartitionGroups()
+	case ast.ShowPartitionGroupStatus:
+		return e.fetchShowPartitionGroupStatus(ctx)
 	}
 	return nil
 }
@@ -1603,6 +1609,9 @@ func constructResultOfShowCreateTable(ctx sessionctx.Context, dbName *ast.CIStr,
 
 	if tableInfo.Affinity != nil {
 		fmt.Fprintf(buf, " /*T![%s] AFFINITY='%s' */", tidb.FeatureIDAffinity, tableInfo.Affinity.Level)
+	}
+	if tableInfo.PartitionGroup != nil {
+		fmt.Fprintf(buf, " /*T![%s] PARTITION_GROUP='%s' */", tidb.FeatureIDPartitionGroup, format.OutputFormat(tableInfo.PartitionGroup.Name.O))
 	}
 
 	// add partition info here.

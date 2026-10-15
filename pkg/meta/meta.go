@@ -97,6 +97,8 @@ var (
 	mMaskingPolicyPrefix   = "MaskingPolicy"
 	mResourceGroups        = []byte("ResourceGroups")
 	mResourceGroupPrefix   = "RG"
+	mPartitionGroups       = []byte("PartitionGroups")
+	mPartitionGroupPrefix  = "PG"
 	mPolicyGlobalID        = []byte("PolicyGlobalID")
 	mMaskingPolicyGlobalID = []byte("MaskingPolicyGlobalID")
 	mPolicyMagicByte       = CurrentMagicByteVer
@@ -341,6 +343,10 @@ func (*Mutator) maskingPolicyKey(policyID int64) []byte {
 
 func (*Mutator) resourceGroupKey(groupID int64) []byte {
 	return fmt.Appendf(nil, "%s:%d", mResourceGroupPrefix, groupID)
+}
+
+func (*Mutator) partitionGroupKey(groupID int64) []byte {
+	return fmt.Appendf(nil, "%s:%d", mPartitionGroupPrefix, groupID)
 }
 
 func (*Mutator) dbKey(dbID int64) []byte {
@@ -1649,6 +1655,86 @@ func (m *Mutator) GetMaskingPolicy(policyID int64) (*model.MaskingPolicyInfo, er
 	policy := &model.MaskingPolicyInfo{}
 	err = json.Unmarshal(value, policy)
 	return policy, errors.Trace(err)
+}
+
+// CreatePartitionGroup creates a partition group.
+func (m *Mutator) CreatePartitionGroup(group *model.PartitionGroupInfo) error {
+	if group.ID == 0 {
+		return errors.New("partition group ID is invalid")
+	}
+	groupKey := m.partitionGroupKey(group.ID)
+	v, err := m.txn.HGet(mPartitionGroups, groupKey)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if v != nil {
+		return errors.Errorf("partition group %d already exists", group.ID)
+	}
+	return m.setPartitionGroup(groupKey, group)
+}
+
+// UpdatePartitionGroup updates an existing partition group.
+func (m *Mutator) UpdatePartitionGroup(group *model.PartitionGroupInfo) error {
+	groupKey := m.partitionGroupKey(group.ID)
+	if _, err := m.getPartitionGroup(groupKey, group.ID); err != nil {
+		return errors.Trace(err)
+	}
+	return m.setPartitionGroup(groupKey, group)
+}
+
+func (m *Mutator) setPartitionGroup(groupKey []byte, group *model.PartitionGroupInfo) error {
+	data, err := json.Marshal(group)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	return m.txn.HSet(mPartitionGroups, groupKey, attachMagicByte(data))
+}
+
+// DropPartitionGroup drops a partition group.
+func (m *Mutator) DropPartitionGroup(groupID int64) error {
+	return errors.Trace(m.txn.HDel(mPartitionGroups, m.partitionGroupKey(groupID)))
+}
+
+// GetPartitionGroup gets a partition group by ID.
+func (m *Mutator) GetPartitionGroup(groupID int64) (*model.PartitionGroupInfo, error) {
+	return m.getPartitionGroup(m.partitionGroupKey(groupID), groupID)
+}
+
+func (m *Mutator) getPartitionGroup(groupKey []byte, groupID int64) (*model.PartitionGroupInfo, error) {
+	value, err := m.txn.HGet(mPartitionGroups, groupKey)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if value == nil {
+		return nil, errors.Errorf("partition group %d doesn't exist", groupID)
+	}
+	value, err = detachMagicByte(value)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	group := &model.PartitionGroupInfo{}
+	return group, errors.Trace(json.Unmarshal(value, group))
+}
+
+// ListPartitionGroups lists all partition groups.
+func (m *Mutator) ListPartitionGroups() ([]*model.PartitionGroupInfo, error) {
+	res, err := m.txn.HGetAll(mPartitionGroups)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	groups := make([]*model.PartitionGroupInfo, 0, len(res))
+	for _, r := range res {
+		value, err := detachMagicByte(r.Value)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		group := &model.PartitionGroupInfo{}
+		if err := json.Unmarshal(value, group); err != nil {
+			return nil, errors.Trace(err)
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
 }
 
 // ListResourceGroups shows all resource groups.

@@ -677,6 +677,28 @@ func GetResourceGroupArgs(job *Job) (*ResourceGroupArgs, error) {
 	return getOrDecodeArgs[*ResourceGroupArgs](&ResourceGroupArgs{}, job)
 }
 
+// PartitionGroupArgs is the arguments for ActionCreatePartitionGroup and
+// ActionDropPartitionGroup. The group ID, reserved ID range and affinity group
+// IDs are fixed when the job is submitted, so retries and owner changes reuse
+// the same IDs.
+type PartitionGroupArgs struct {
+	PGInfo *PartitionGroupInfo `json:"pg_info,omitempty"`
+}
+
+func (a *PartitionGroupArgs) getArgsV1(*Job) []any {
+	return []any{a.PGInfo}
+}
+
+func (a *PartitionGroupArgs) decodeV1(job *Job) error {
+	a.PGInfo = &PartitionGroupInfo{}
+	return errors.Trace(job.decodeArgs(a.PGInfo))
+}
+
+// GetPartitionGroupArgs gets the partition group args.
+func GetPartitionGroupArgs(job *Job) (*PartitionGroupArgs, error) {
+	return getOrDecodeArgs[*PartitionGroupArgs](&PartitionGroupArgs{}, job)
+}
+
 // RebaseAutoIDArgs is the arguments for ActionRebaseAutoID DDL.
 // It is also for ActionRebaseAutoRandomBase.
 type RebaseAutoIDArgs struct {

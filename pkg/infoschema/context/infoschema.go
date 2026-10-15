@@ -81,6 +81,13 @@ var AffinityAttribute SpecialAttributeFilter = func(t *model.TableInfo) bool {
 	return t.Affinity != nil
 }
 
+// PartitionGroupAttribute is the partition group attribute filter used by
+// ListTablesWithSpecialAttribute. Members are partitioned tables, so they are
+// already covered by PartitionAttribute in HasSpecialAttributes.
+var PartitionGroupAttribute SpecialAttributeFilter = func(t *model.TableInfo) bool {
+	return t.PartitionGroup != nil
+}
+
 // HasSpecialAttributes checks if a table has any special attributes.
 func HasSpecialAttributes(t *model.TableInfo) bool {
 	return TTLAttribute(t) || TiFlashAttribute(t) || PlacementPolicyAttribute(t) || PartitionAttribute(t) || TableLockAttribute(t) || AffinityAttribute(t)

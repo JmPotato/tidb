@@ -1314,6 +1314,16 @@ func (*SchemaTracker) AlterPlacementPolicy(_ sessionctx.Context, _ *ast.AlterPla
 	return nil
 }
 
+// CreatePartitionGroup implements the DDL interface, it's no-op in DM's case.
+func (*SchemaTracker) CreatePartitionGroup(_ sessionctx.Context, _ *ast.CreatePartitionGroupStmt) error {
+	return nil
+}
+
+// DropPartitionGroup implements the DDL interface, it's no-op in DM's case.
+func (*SchemaTracker) DropPartitionGroup(_ sessionctx.Context, _ *ast.DropPartitionGroupStmt) error {
+	return nil
+}
+
 // AddResourceGroup implements the DDL interface, it's no-op in DM's case.
 func (*SchemaTracker) AddResourceGroup(_ sessionctx.Context, _ *ast.CreateResourceGroupStmt) error {
 	return nil

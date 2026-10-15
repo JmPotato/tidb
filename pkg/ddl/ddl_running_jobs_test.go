@@ -55,6 +55,9 @@ func checkInvariants(t *testing.T, j *runningJobs) {
 		for _, v := range checkingObj.resourceGroups {
 			require.Greater(t, v, 0)
 		}
+		for _, v := range checkingObj.partitionGroups {
+			require.Greater(t, v, 0)
+		}
 	}
 }
 
@@ -357,4 +360,40 @@ func TestExclusiveShared(t *testing.T) {
 	j.resetAllPending()
 	runnable = j.checkRunnable(0, pendingInvolves)
 	require.True(t, runnable)
+}
+
+func TestPartitionGroupInvolving(t *testing.T) {
+	j := newRunningJobs()
+
+	// CREATE TABLE of a member takes the group shared.
+	createMember := []model.InvolvingSchemaInfo{
+		{Database: "db1", Table: "t1"},
+		{PartitionGroup: "pg", Mode: model.SharedInvolving},
+	}
+	require.True(t, j.checkRunnable(1, createMember))
+	j.addRunning(1, createMember)
+	createMember2 := []model.InvolvingSchemaInfo{
+		{Database: "db1", Table: "t2"},
+		{PartitionGroup: "pg", Mode: model.SharedInvolving},
+	}
+	require.True(t, j.checkRunnable(2, createMember2))
+	j.addRunning(2, createMember2)
+
+	// DROP PARTITION GROUP takes it exclusively and waits for the members.
+	dropGroup := []model.InvolvingSchemaInfo{{PartitionGroup: "pg"}}
+	require.False(t, j.checkRunnable(3, dropGroup))
+	// A placement policy or resource group with the same name is a different object.
+	require.True(t, j.checkRunnable(4, []model.InvolvingSchemaInfo{{Policy: "pg"}}))
+	require.True(t, j.checkRunnable(5, []model.InvolvingSchemaInfo{{ResourceGroup: "pg"}}))
+	require.True(t, j.checkRunnable(6, []model.InvolvingSchemaInfo{{PartitionGroup: "other"}}))
+
+	j.removeRunning(1, createMember)
+	j.removeRunning(2, createMember2)
+	checkInvariants(t, j)
+	require.True(t, j.checkRunnable(3, dropGroup))
+	j.addRunning(3, dropGroup)
+	require.False(t, j.checkRunnable(7, createMember))
+	j.removeRunning(3, dropGroup)
+	checkInvariants(t, j)
+	require.True(t, j.exclusive.empty() && j.shared.empty())
 }

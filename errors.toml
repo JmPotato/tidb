@@ -1671,6 +1671,11 @@ error = '''
 Job [%v] has been paused by TiDB because a storage node does not have enough disk space: %s
 '''
 
+["ddl:8277"]
+error = '''
+Partition group error: %s
+'''
+
 ["ddl:9014"]
 error = '''
 TiFlash backfill index failed: %s

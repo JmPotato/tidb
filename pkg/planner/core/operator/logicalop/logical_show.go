@@ -101,6 +101,8 @@ type ShowContents struct {
 	ImportJobID       *int64 // Used for SHOW LOAD DATA JOB <jobID>
 	ImportGroupKey    string // Used for SHOW IMPORT GROUP <GROUP_KEY>
 	DistributionJobID *int64 // Used for SHOW DISTRIBUTION JOB <JobID>
+
+	PartitionGroupName ast.CIStr // Used for SHOW PARTITION GROUP STATUS <name>
 }
 
 const emptyShowContentsSize = int64(unsafe.Sizeof(ShowContents{}))

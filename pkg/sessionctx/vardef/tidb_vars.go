@@ -1262,6 +1262,10 @@ const (
 	TiDBAutoAnalyzeConcurrency = "tidb_auto_analyze_concurrency"
 	// TiDBEnableDistTask indicates whether to enable the distributed execute background tasks(For example DDL, Import etc).
 	TiDBEnableDistTask = "tidb_enable_dist_task"
+
+	// TiDBEnablePartitionGroup indicates whether CREATE PARTITION GROUP and
+	// partition group member tables are allowed.
+	TiDBEnablePartitionGroup = "tidb_enable_partition_group"
 	// TiDBMaxDistTaskNodes indicates the max node count that could be used by distributed execution framework.
 	TiDBMaxDistTaskNodes = "tidb_max_dist_task_nodes"
 	// TiDBEnableFastCreateTable indicates whether to enable the fast create table feature.
@@ -1772,6 +1776,7 @@ const (
 	DefTiDBEnableWorkloadBasedLearning                = false
 	DefTiDBWorkloadBasedLearningInterval              = 24 * time.Hour
 	DefTiDBEnableDistTask                             = true
+	DefTiDBEnablePartitionGroup                       = false
 	DefTiDBMaxDistTaskNodes                           = -1
 	DefTiDBEnableFastCreateTable                      = true
 	DefTiDBSimplifiedMetrics                          = false
@@ -2012,6 +2017,7 @@ var (
 	InstancePlanCacheReservedPercentage = atomic.NewFloat64(0.1)
 	InstancePlanCacheMaxMemSize         = atomic.NewInt64(int64(DefTiDBInstancePlanCacheMaxMemSize))
 	EnableDistTask                      = atomic.NewBool(DefTiDBEnableDistTask)
+	EnablePartitionGroup                = atomic.NewBool(DefTiDBEnablePartitionGroup)
 	EnableFastCreateTable               = atomic.NewBool(DefTiDBEnableFastCreateTable)
 	EnableNoopVariables                 = atomic.NewBool(DefTiDBEnableNoopVariables)
 	enableMDL                           = atomic.NewBool(false)

@@ -351,7 +351,8 @@ func appendInvolvingSchemaInfo(dst []model.InvolvingSchemaInfo, src ...model.Inv
 			if dst[i].Database != info.Database ||
 				dst[i].Table != info.Table ||
 				dst[i].Policy != info.Policy ||
-				dst[i].ResourceGroup != info.ResourceGroup {
+				dst[i].ResourceGroup != info.ResourceGroup ||
+				dst[i].PartitionGroup != info.PartitionGroup {
 				continue
 			}
 			if dst[i].Mode == model.SharedInvolving && info.Mode == model.ExclusiveInvolving {

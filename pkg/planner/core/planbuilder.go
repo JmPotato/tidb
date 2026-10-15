@@ -3556,6 +3556,7 @@ func (b *PlanBuilder) buildShow(ctx context.Context, show *ast.ShowStmt) (base.P
 			ImportJobID:           show.ImportJobID,
 			DistributionJobID:     show.DistributionJobID,
 			ImportGroupKey:        show.ShowGroupKey,
+			PartitionGroupName:    show.PartitionGroupName,
 		},
 	}.Init(b.ctx)
 	isView := false
@@ -5057,6 +5058,10 @@ func (b *PlanBuilder) buildSplitRegion(node *ast.SplitRegionStmt) (base.Plan, er
 	if tnW.TableInfo.TempTableType != model.TempTableNone {
 		return nil, plannererrors.ErrOptOnTemporaryTable.GenWithStackByArgs("split table")
 	}
+	if tnW.TableInfo.PartitionGroup != nil {
+		// Each partition index of a partition group is kept as one Region.
+		return nil, dbterror.ErrGeneralUnsupportedDDL.GenWithStackByArgs("SPLIT TABLE of a partition group member table")
+	}
 	if node.SplitSyntaxOpt != nil && node.SplitSyntaxOpt.HasPartition && tnW.TableInfo.Partition == nil {
 		return nil, plannererrors.ErrPartitionClauseOnNonpartitioned
 	}
@@ -5647,6 +5652,9 @@ func (b *PlanBuilder) buildDDL(ctx context.Context, node ast.DDLNode) (base.Plan
 		// Repair table command can only be executed by administrator.
 		b.visitInfo = appendVisitInfo(b.visitInfo, mysql.SuperPriv, "", "", "", nil)
 	case *ast.DropPlacementPolicyStmt, *ast.CreatePlacementPolicyStmt, *ast.AlterPlacementPolicyStmt:
+		err := plannererrors.ErrSpecificAccessDenied.GenWithStackByArgs("SUPER or PLACEMENT_ADMIN")
+		b.visitInfo = appendDynamicVisitInfo(b.visitInfo, []string{"PLACEMENT_ADMIN"}, false, err)
+	case *ast.CreatePartitionGroupStmt, *ast.DropPartitionGroupStmt:
 		err := plannererrors.ErrSpecificAccessDenied.GenWithStackByArgs("SUPER or PLACEMENT_ADMIN")
 		b.visitInfo = appendDynamicVisitInfo(b.visitInfo, []string{"PLACEMENT_ADMIN"}, false, err)
 	case *ast.CreateResourceGroupStmt, *ast.DropResourceGroupStmt, *ast.AlterResourceGroupStmt:
@@ -6250,6 +6258,14 @@ func buildShowSchema(s *ast.ShowStmt, isView bool, isSequence bool) (schema *exp
 		ftypes = []byte{mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeLonglong, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeLonglong, mysql.TypeLonglong}
 	case ast.ShowStorageClassTransitions:
 		return convertColumnInfosToOutputSchemasAndNames(infoschema.GetStorageClassTransitionsTableColumns())
+	case ast.ShowPartitionGroups:
+		names = []string{"Group_name", "Group_id", "State", "Partitions", "Max_members", "Remaining_members", "Member_count", "Member_tables"}
+		ftypes = []byte{mysql.TypeVarchar, mysql.TypeLonglong, mysql.TypeVarchar, mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeVarchar}
+	case ast.ShowPartitionGroupStatus:
+		names = []string{"Partition_index", "Range_start_id", "Range_end_id", "Affinity_group_id", "Phase", "Leader_store_id", "Voter_store_ids", "Leader_source",
+			"Region_count", "Affinity_region_count", "Region_ids", "Region_leader_store_ids", "Single_region", "Observed_at", "Error"}
+		ftypes = []byte{mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeLonglong, mysql.TypeVarchar, mysql.TypeVarchar,
+			mysql.TypeLonglong, mysql.TypeLonglong, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeVarchar, mysql.TypeVarchar}
 	}
 	schema, outputNames = convert2OutputSchemasAndNames(names, ftypes, flags)
 	return schema, outputNames
